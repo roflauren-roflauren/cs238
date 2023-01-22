@@ -8,7 +8,6 @@ def write_gph(dag, idx2names, filename):
         for edge in dag.edges():
             f.write("{}, {}\n".format(idx2names[edge[0]], idx2names[edge[1]]))
 
-
 def compute(infile, outfile):
     # WRITE YOUR CODE HERE
     # FEEL FREE TO CHANGE ANYTHING ANYWHERE IN THE CODE
