@@ -1,0 +1,9 @@
+small:   19.46 seconds (yes annealing, yes tabu list, no max parents,  no max neighbors)
+medium: 403.01 seconds (yes annealing, yes tabu list, no max parents,  no max neighbors)
+large: 7193.58 seconds (yes annealing, yes tabu list, yes max parents, yes max neighbors)
+
+max parents: 3 
+tabu_list: size 1 
+annealing prob: 1/sqrt(n) where n is loop number 
+max neighbors: 75 total, max 25 from each operation 
+random seed: 238 

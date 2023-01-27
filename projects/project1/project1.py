@@ -18,11 +18,14 @@ import networkx as nx
 # VAR/SETTING:              # DESCRIPTION:
 MIN_VAL = 1                 # constant describing the minimum value any variable in the graph can assume.
 max_vals = None             # dict. mapping: var_idx -> maximum value/num. potential values (r_i).
-idx2names = {}              # dict. mapping: var_idx -> var_name.
-MAX_PARENTS = 100           # constant controlling the number of parents any node in a given neighbor graph can have before the search ignores that graph.
+idx2names = {}              # dict. mapping: var_idx -> var_name.P
+MAX_PARENTS = 3             # constant controlling the number of parents any node in a given neighbor graph can have before the search ignores that graph. to disable, set MAX_PARENTS = large constant.
+USE_TABU = True             # constant controlling whether to use the TABU_LIST or not
 TABU_LIST = []              # list of recently visited edge sets which will steer the hill climb search away from re-visiting recently seen DAGs.
 TABU_LIST_MAX_SIZE = 1      # constant describing the maximum size we want the above mentioned TABU_LIST to be.
 USE_ANNEALING = True        # constant controlling whether or not to use simulatned annealing in the hill climb search. 
+USE_MAX_NEIGHBORS = True    # constant controlling whether or not to limit the number of neighbors generated during each iteration of the hill climb search.
+MAX_NEIGHBORS = [25,25,25]  # list specifying the maximum number of neighbors to be generated from each operation (i.e., [# edge add, # edge subtract, # edge flip]) if USE_MAX_NEIGHBORS is set to 'True.'
 rd.seed(238)                # fixed seed number to ensure replicability during testing; feel free to comment out! 
 
 def init_graph(inputfilename):
@@ -52,6 +55,87 @@ def write_gph(dag, idx2names, filename):
     with open(filename, "w") as f:
         for edge in dag.edges():
             f.write("{}, {}\n".format(idx2names[edge[0]], idx2names[edge[1]]))
+
+
+def generate_subset_neighbors(g: nx.DiGraph, original_nodes: set):
+    """
+    Generates and returns the edge sets of a (partially) random subset of DAGs which are within one operation of the supplied DAG, g.
+    An operation can be an: edge addition; edge deletion; edge reversal; on a **SINGLE** edge.
+    """
+
+    # retrieve the current set of nodes & edges (some as lists and some as sets for shuffling purposes):
+    source_edge_set, source_node_list, source_edge_list = set(g.edges()), list(g.nodes()), list(g.edges())
+    # counters for the number of neighbors generated from each operation: 
+    add_neighbors, subtract_neighbors, flip_neighbors = 0, 0, 0
+    # init. the ret. val:
+    neighbor_edge_sets = []
+
+    # randomly permutate the containers which will be iterated through to generate neighbors:
+    rd.shuffle(source_node_list)
+    rd.shuffle(source_edge_list)
+
+    # first set of ret vals: graphs within one edge addition of g
+    for node in source_node_list:
+        # limiting the number of neighbors which can be generated through the 'edge add' operator:
+        if add_neighbors < MAX_NEIGHBORS[0]:
+            # rule: for a node n, you cannot add an arc from n to any of n's ancestor or n itself without creating a cycle.
+            node_ancestors = nx.ancestors(g, node).union({node})
+            valid_new_neighbors = list(original_nodes - node_ancestors)
+            # shuffle the valid_new_neighbors too: 
+            rd.shuffle(valid_new_neighbors)
+
+            for new_neighbor in valid_new_neighbors:
+                # need to double check this b/c more than MAX_NEIGHBORS[0] neighbors can be added from a single node's 'edge add' neighbors:
+                if add_neighbors < MAX_NEIGHBORS[0]:
+                    # omit any neighboring DAGs for who adding an edge would cause the edge-receiving node to have too many parents: 
+                    if len(list(g.predecessors(new_neighbor))) < MAX_PARENTS: 
+                        # further omit any neighbors which result from adding edges which already exist in the source graph:
+                        if (node, new_neighbor) not in source_edge_set:
+                            neighbor_edge_set = source_edge_set.union(
+                                {(node, new_neighbor)})
+                            neighbor_edge_sets.append(neighbor_edge_set)
+                            add_neighbors += 1
+                else: 
+                    break
+        else:
+            break 
+
+    # second set of ret vals: graphs within one edge deletion of g
+    for edge in source_edge_list:
+        # limiting the number of neighbors which can be generated through the 'edge subtract' operator:
+        if subtract_neighbors < MAX_NEIGHBORS[1]:
+            neighbor_edge_set = source_edge_set.copy()
+            neighbor_edge_set.remove(edge)
+            neighbor_edge_sets.append(neighbor_edge_set)
+            subtract_neighbors += 1
+        else: 
+            break 
+
+    # third (and final) set of ret vals: graphs within one edge reversal of g
+    for edge in source_edge_list:
+        # limiting the number of neighbors which can be generated through the 'edge flip' operator:
+        if flip_neighbors < MAX_NEIGHBORS[2]:
+            neighbor_edge_set = source_edge_set.copy()
+            neighbor_edge_set.remove(edge)
+            flipped_edge = edge[::-1] 
+            node_with_potential_new_parent = flipped_edge[0]
+
+            # omit neighboring DAG if flipping this edge would cause the new edge-receiving node to have too many parents:
+            if len(list(g.predecessors(node_with_potential_new_parent))) + 1 < MAX_PARENTS:
+                neighbor_edge_set.add(flipped_edge)
+
+                # initialize a new graph with the same nodes as the source DAG & one edge reversed:
+                potential_neighbor_graph = nx.DiGraph(incoming_graph_data=neighbor_edge_set)
+                potential_neighbor_graph.add_nodes_from(original_nodes)
+
+                # check if the neighboring graph is a DAG:
+                if nx.is_directed_acyclic_graph(potential_neighbor_graph):
+                    neighbor_edge_sets.append(set(potential_neighbor_graph.edges()))
+                flip_neighbors += 1
+        else: 
+            break
+
+    return neighbor_edge_sets
 
 
 def generate_neighbors(g: nx.DiGraph, original_nodes: set):
@@ -172,7 +256,10 @@ def hill_climb_search(g: nx.DiGraph, original_nodes: set, data: pd.DataFrame):
         print("I'm currently on search loop number: {ln}".format(ln=loop_counter))
 
         # gen. a list of the edge sets of all DAGs within one operation of our current DAG:
-        neighbor_dag_edge_sets = generate_neighbors(est_dag, original_nodes)
+        if (USE_MAX_NEIGHBORS == True):
+            neighbor_dag_edge_sets = generate_subset_neighbors(est_dag, original_nodes)
+        else: 
+            neighbor_dag_edge_sets = generate_neighbors(est_dag, original_nodes)
 
         # score the neighboring DAGs by Bayesian score:
         neighbor_dag_and_scores = [(bayesian_score(edge_set, original_nodes, data), edge_set) 
@@ -186,17 +273,18 @@ def hill_climb_search(g: nx.DiGraph, original_nodes: set, data: pd.DataFrame):
         score_improvement = best_neighbor_score - curr_score
 
         # ignore score and move to a random neighbor if the best neighboring DAG is in the TABU_LIST: 
-        if (len(TABU_LIST) >= TABU_LIST_MAX_SIZE): 
-            if best_neighbor_edge_set in TABU_LIST: 
-                neighbor_idx = rd.randint(0, len(neighbor_dag_and_scores) - 1)
-                alt_dag = nx.DiGraph(incoming_graph_data=neighbor_dag_and_scores[neighbor_idx][1])
-                alt_dag.add_nodes_from(original_nodes)
-                est_dag, curr_score = alt_dag, neighbor_dag_and_scores[neighbor_idx][0] 
+        if (USE_TABU == True):
+            if (len(TABU_LIST) >= TABU_LIST_MAX_SIZE): 
+                if best_neighbor_edge_set in TABU_LIST: 
+                    neighbor_idx = rd.randint(0, len(neighbor_dag_and_scores) - 1)
+                    alt_dag = nx.DiGraph(incoming_graph_data=neighbor_dag_and_scores[neighbor_idx][1])
+                    alt_dag.add_nodes_from(original_nodes)
+                    est_dag, curr_score = alt_dag, neighbor_dag_and_scores[neighbor_idx][0] 
+                else: 
+                    TABU_LIST.pop(0)
+                    TABU_LIST.append(best_neighbor_edge_set)
             else: 
-                TABU_LIST.pop(0)
                 TABU_LIST.append(best_neighbor_edge_set)
-        else: 
-            TABU_LIST.append(best_neighbor_edge_set)
 
         # ignore score and move to a random neighbor if the simulated annealing check passes: 
         if (USE_ANNEALING == True): 
@@ -240,9 +328,9 @@ def main():
     print("\n" + "=" * 25 + "\n" + " " * 5 + "OUTPUT SUMMARY:" + "\n" + "=" * 25)
     print("Final score is: {score}".format(score=final_bn_score))
     print("It took me: --- %.2f --- seconds to find the final graph." % (time.time() - start_time))
-    print("The final graph is a DAG: " + str(nx.is_directed_acyclic_graph(est_dag))) 
+    print("The final graph is a DAG: " + str(nx.is_directed_acyclic_graph(est_dag)) + "\n") 
     plt.figure(1)
-    nx.draw(est_dag, labels=idx2names, with_labels=True, pos=nx.planar_layout(est_dag), node_color="lightskyblue", alpha=0.75)
+    nx.draw(est_dag, labels=idx2names, with_labels=True, node_color="lightskyblue", alpha=0.75)
     plt.show()
 
 
