@@ -19,14 +19,15 @@ import networkx as nx
 MIN_VAL = 1                 # constant describing the minimum value any variable in the graph can assume.
 max_vals = None             # dict. mapping: var_idx -> maximum value/num. potential values (r_i).
 idx2names = {}              # dict. mapping: var_idx -> var_name.P
-MAX_PARENTS = 3             # constant controlling the number of parents any node in a given neighbor graph can have before the search ignores that graph. to disable, set MAX_PARENTS = large constant.
+MAX_PARENTS = 100           # constant controlling the number of parents any node in a given neighbor graph can have before the search ignores that graph. to disable, set MAX_PARENTS = large constant.
 USE_TABU = True             # constant controlling whether to use the TABU_LIST or not
 TABU_LIST = []              # list of recently visited edge sets which will steer the hill climb search away from re-visiting recently seen DAGs.
 TABU_LIST_MAX_SIZE = 1      # constant describing the maximum size we want the above mentioned TABU_LIST to be.
 USE_ANNEALING = True        # constant controlling whether or not to use simulatned annealing in the hill climb search. 
-USE_MAX_NEIGHBORS = True    # constant controlling whether or not to limit the number of neighbors generated during each iteration of the hill climb search.
+USE_MAX_NEIGHBORS = False    # constant controlling whether or not to limit the number of neighbors generated during each iteration of the hill climb search.
 MAX_NEIGHBORS = [25,25,25]  # list specifying the maximum number of neighbors to be generated from each operation (i.e., [# edge add, # edge subtract, # edge flip]) if USE_MAX_NEIGHBORS is set to 'True.'
 rd.seed(238)                # fixed seed number to ensure replicability during testing; feel free to comment out! 
+
 
 def init_graph(inputfilename):
     """
@@ -191,6 +192,10 @@ def generate_neighbors(g: nx.DiGraph, original_nodes: set):
     return neighbor_edge_sets
 
 
+##############################################
+###      BAYESIAN SCORE FUNCTION HERE:     ###
+##############################################
+
 def bayesian_score(g_edge_set: set, original_nodes: set, data: pd.DataFrame):
     """
     Returns the Bayesian score for the DAG specified by g_edge_set and g_node_set over the samples in 'data'.
@@ -245,7 +250,14 @@ def bayesian_score(g_edge_set: set, original_nodes: set, data: pd.DataFrame):
     return bayesian_score
 
 
+##############################################
+###   STRUCTURE LEARNING ALGORITHM HERE:   ###
+##############################################
+
 def hill_climb_search(g: nx.DiGraph, original_nodes: set, data: pd.DataFrame):
+    """
+    Conducts a simple greedy hill climb search to find a locally optimal DAG to describe the data in 'data'.
+    """
     # initialize ret val & search parameters:
     est_dag, curr_score, score_improvement, loop_counter = g, bayesian_score(g, original_nodes, data), np.Inf, 0
 
@@ -306,6 +318,9 @@ def hill_climb_search(g: nx.DiGraph, original_nodes: set, data: pd.DataFrame):
 
 
 def main():
+    """
+    Entry point of program.
+    """
     # argument parsing:
     if len(sys.argv) != 3:
         raise Exception("usage: python project1.py <infile>.csv <outfile>.gph")
