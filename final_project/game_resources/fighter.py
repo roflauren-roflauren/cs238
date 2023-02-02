@@ -4,13 +4,31 @@ CHAR_WIDTH  = 80
 CHAR_HEIGHT = 180
 
 class Fighter():
-    def __init__(self, x : int, y : int):
+    def __init__(self, x, y, start_flip, data, sprite_sheet, animation_steps):
         """_summary_
 
         Args:
             x (int): left-coord where fighter will be instantiated. 
             y (int): top-coord where fighter will be instantiated. 
         """
+        # retrieve the character size, scaling factor, and offset:
+        self.size = data[0]
+        self.image_scale = data[1]
+        self.offset = data[2]
+        
+        # ensures that character faces target:
+        self.flip = start_flip
+        
+        # list of sprite images for different actions
+        self.animation_list = self.load_images(sprite_sheet, animation_steps)
+        
+        # maintains what action the character is doing 
+        # 0: idle, 1: run, 2: jump, 3: attack1, 4: attack2, 5: hit, 6: death
+        self.action = 0
+        
+        # animation variables: 
+        self.frame_index = 0 # which frame of the animation we're on
+        self.image = self.animation_list[self.action][self.frame_index]
         
         # player position as represented by a rectangle:
         self.rect = pygame.Rect(
@@ -31,8 +49,28 @@ class Fighter():
         
         # health pool: 
         self.health = 100
-        
-        
+    
+    def load_images(self, sprite_sheet, animation_steps):
+        """_summary_
+
+        Args:
+            sprite_sheet (_type_): _description_
+            animation_steps (_type_): _description_
+        """
+        # extract images from spritesheet:
+        animation_list = []
+        for y, animation in enumerate(animation_steps):
+            temp_img_list = []
+            for x in range(animation):
+                temp_img = sprite_sheet.subsurface(x * self.size, y * self.size, self.size, self.size) 
+                # scale the image before appending to the animation list:
+                temp_img_list.append(
+                    pygame.transform.scale(temp_img, 
+                                           (self.size * self.image_scale, self.size * self.image_scale)))
+            animation_list.append(temp_img_list)
+            
+        return animation_list
+            
     def move(self, screen_width, screen_height, surface, target):
         """_summary_
 
@@ -84,7 +122,13 @@ class Fighter():
             self.vel_y = 0
             self.jump = False 
             dy = screen_height - 156 - self.rect.bottom # note: 156 == dist. in pixels from bottom of screen to bg's "floor"
-            
+    
+        # make sure characters face each other:
+        if target.rect.centerx > self.rect.centerx: 
+            self.flip = False
+        else: 
+            self.flip = True
+    
         # update player positions: 
         self.rect.x += dx
         self.rect.y += dy
@@ -97,7 +141,12 @@ class Fighter():
         # TO-DO: RESET self.attacking TO ALLOW OTHER MOVEMENTS 
         # TO-DO: MAKE attacking_rect DEPEND ON ATTACK TYPE AND CHANGE DIMS.
         
-        attacking_rect = pygame.Rect(self.rect.centerx, self.rect.y, 2 * self.rect.width, self.rect.height)
+        attacking_rect = pygame.Rect(
+            self.rect.centerx - (2 * self.rect.width * self.flip), # self.flip ensures attack faces enemy
+            self.rect.y, 
+            2 * self.rect.width, 
+            self.rect.height
+        )
         
         if attacking_rect.colliderect(target.rect):
            target.health -= 10
@@ -107,8 +156,12 @@ class Fighter():
         
     def draw(self, surface):
         """_summary_
-
         Args:
             surface (_type_): Game window we are drawing the character/fighter onto. 
         """
+        img = pygame.transform.flip(self.image, self.flip, False)
         pygame.draw.rect(surface, (255, 0, 0), self.rect)
+        surface.blit(img, 
+                        (self.rect.x - (self.offset[0] * self.image_scale), 
+                         self.rect.y - (self.offset[1] * self.image_scale)
+                         ))

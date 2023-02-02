@@ -20,6 +20,13 @@ FPS = 120
 RED = (255, 0, 0)
 YELLOW = (255, 255, 0)
 WHITE = (255, 255, 255)
+GREEN = (0, 255, 0)
+
+# define fighter variables: 
+KNIGHT_SIZE = 162 # number of pixels in one frame of the spritesheet (assumed to be a square)
+KNIGHT_SCALE = 4  # how much to scale up individual images
+KNIGHT_OFFSET = [72, 56] # how much to offset the sprites by so they're centered on their underlying rectangles
+KNIGHT_DATA = [KNIGHT_SIZE, KNIGHT_SCALE, KNIGHT_OFFSET]
 
 # instantiate window object and window name:
 screen = pygame.display.set_mode(size=(SCREEN_WIDTH, SCREEN_HEIGHT))
@@ -27,6 +34,14 @@ pygame.display.set_caption("Mortal (Q)ombat")
 
 # load background image:
 bg_image = pygame.image.load("./game_resources/visual_assets/oak_woods_background/collated_forest_bg.png").convert_alpha()
+
+# TO-DO: REPLACE WITH DIFF. SPRITE SHEET
+
+# load spritesheets: 
+knight_sheet = pygame.image.load("./game_resources/visual_assets/sample_warrior_spritesheet.png").convert_alpha()
+
+# define number of steps/frames in each animation: 
+KNIGHT_ANIMATION_STEPS = [10, 8, 1, 7, 7, 3, 7]
 
 # function which actually draws the background: 
 def draw_bg():
@@ -37,24 +52,27 @@ def draw_bg():
     screen.blit(scaled_bg, dest=(0, 0)) # (0, 0) is top-left corner
     
 # function which draws fighter healthbars: 
-def draw_health_bar(health, x, y ): 
+def draw_health_bar(health, x, y): 
     """_summary_
 
     Args:
         health (_type_): _description_
         x (_type_): _description_
-        y (_type_): _description_
+        y (_type_): _description_d
     """
-    
-    pygame.draw.rect(screen, YELLOW, (x, y, 400, 30))
+    # ratio of remaining health (100 is max):
+    ratio = health / 100
+    pygame.draw.rect(screen, WHITE, (x - 3, y - 3, 406, 36)) # outline of health bars
+    pygame.draw.rect(screen, RED, (x, y, 400, 30)) # underlying full (red) health for comparison
+    pygame.draw.rect(screen, GREEN, (x, y, 400 * ratio, 30)) # remaining health rect 
 
 #######################
 ###    GAME VARS    ###
 #######################
 
 # create two instances of fighters 
-fighter_1 = Fighter(200, 264) 
-fighter_2 = Fighter(700, 264)
+fighter_1 = Fighter(200, 264, False, KNIGHT_DATA, knight_sheet, KNIGHT_ANIMATION_STEPS) 
+fighter_2 = Fighter(700, 264, True, KNIGHT_DATA, knight_sheet, KNIGHT_ANIMATION_STEPS)
 
 
 #######################
