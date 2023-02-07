@@ -29,6 +29,7 @@ class Fighter():
         # animation variables: 
         self.frame_index = 0 # which frame of the animation we're on
         self.image = self.animation_list[self.action][self.frame_index]
+        self.update_time = pygame.time.get_ticks()
         
         # player position as represented by a rectangle:
         self.rect = pygame.Rect(
@@ -37,6 +38,9 @@ class Fighter():
         
         # y-velocity: 
         self.vel_y = 0
+        
+        # track whether character is moving L/R or not: 
+        self.running = False
         
         # track whether character is jumping or not: 
         self.jump = False
@@ -47,8 +51,31 @@ class Fighter():
         # attack type during the current move: 
         self.attack_type = 0 # valid values: 0 (inactive), 1, 2
         
+        # cooldown on attacking (prevents endless attacking):
+        self.attack_cooldown = 0
+        
+        # character's attack rect (used to check for an effective parry by enemy):
+        self.attacking_rect = pygame.Rect(                    
+                    self.rect.x,
+                    self.rect.y, 
+                    self.rect.width, 
+                    self.rect.height
+        )
+        
+        # track whether character is parrying or not: 
+        self.parrying = False 
+        
+        # cooldown on parrying (prevents endless parrying):
+        self.parry_cooldown = 0
+        
+        # track whether character has been hit: 
+        self.hit = False
+        
         # health pool: 
         self.health = 100
+        
+        # tracks dead or alive: 
+        self.alive = True
     
     def load_images(self, sprite_sheet, animation_steps):
         """_summary_
@@ -82,32 +109,45 @@ class Fighter():
         GRAVITY = 2    # counters jumping & ensures player doesn't fly off screen
         dx, dy = 0, 0  # change in x, y coordinate of character
         
+        # reset key presses/character condition: 
+        self.running = False
+        self.attack_type = 0
+        
+        
         # get keypresses: 
         key = pygame.key.get_pressed()
         
         
-        # TO-DO: ADD IN BLOCKING FUNCTIONALITY
-        # TO-DO: PROBABLY DELETE THIS, LET CHARACTERS ATTACK IN MIDAIR AND WHATNOT: 
-        # can only perform other actions if not currently attacking: 
-        if self.attacking == False:
+        # TO-DO: ADD IN PARRYING FUNCTIONALITY
+   
+        # can only perform movement actions if not currently attacking/parrying: 
+        if self.attacking == False and self.parrying == False:
         
             # movement keypresses: 
             if key[pygame.K_a]: # left
                 dx = -SPEED 
+                self.running = True
+                
             if key[pygame.K_d]: # right 
                 dx = SPEED 
+                self.running = True
+                
             if key[pygame.K_w] and self.jump == False : # jump, 2nd cond. ensures no double-jump allowed! 
-                self.vel_y = -30 
+                self.vel_y = -35
                 self.jump = True
+                
             if key[pygame.K_j] or key[pygame.K_k]: 
-                
-                self.attack(surface, target)
-                
                 # determine attack type: 
                 if key[pygame.K_j]: 
-                    self.attack_type = 1 # attack 1: sweeps low to high, 5 frames, medium damage
+                    self.attack_type = 1 # attack 1: thrust mid-level, 4 frames, low damage
                 else: 
-                    self.attack_type = 2 # attack 2: thrust mid-level, 4 frames, low damage
+                    self.attack_type = 2 # attack 2: sweeps low-to-high, medium damage
+                    
+                # call attack helper method: 
+                self.attack(surface, target)
+                
+            if key[pygame.K_l]: # parry
+                self.parry(surface, target)
             
         # apply gravity: 
         self.vel_y += GRAVITY
@@ -128,31 +168,132 @@ class Fighter():
             self.flip = False
         else: 
             self.flip = True
+            
+        # apply attack cooldown: 
+        if self.attack_cooldown > 0: 
+            self.attack_cooldown -= 1
+            
+        # apply parry cooldown: 
+        if self.parry_cooldown > 0: 
+            self.parry_cooldown -= 1
     
         # update player positions: 
         self.rect.x += dx
         self.rect.y += dy
+       
+    def update(self):
+        # check what action the player is performing: 
+        if self.health <= 0: 
+            self.health = 0
+            self.alive = False
+            self.update_action(6) # 6: death
+        elif self.parrying == True:
+            self.update_action(7) # 7: parrying 
+        elif self.hit == True:
+            self.update_action(5) # 5: received hit
+        elif self.attacking == True: 
+            if self.attack_type == 1:
+                self.update_action(3) # 3: attack1
+            elif self.attack_type == 2:
+                self.update_action(4) # 4: attack2
+        elif self.jump == True: 
+            self.update_action(2) # 2: jump 
+        elif self.running == True: 
+            self.update_action(1) # 1: run 
+        else: 
+            self.update_action(0) # 0: idle
+        
+        animation_cooldown = 50 # in milliseconds, how long each frame takes
+        self.image = self.animation_list[self.action][self.frame_index]
+
+        # check if enough time has passed since the last update to refresh animation: 
+        if pygame.time.get_ticks() - self.update_time > animation_cooldown: 
+            self.frame_index += 1
+            self.update_time = pygame.time.get_ticks()
+            
+        # check if the animation has finished: 
+        if self.frame_index >= len(self.animation_list[self.action]): 
+            # if the player is dead, then end the animation: 
+            if self.alive == False: 
+                self.frame_index = len(self.animation_list[self.action]) - 1
+            else: 
+                self.frame_index = 0                
+                # check if an attack was executed: 
+                if self.action == 3 or self.action == 4: 
+                    self.attacking = False
+                    self.attack_cooldown = 20
+                # check if attack was received: 
+                if self.action == 5: 
+                    self.hit = False
+                    # if the player was in the middle of an attack, then their attack is cancelled: 
+                    self.attacking = False 
+                    self.attack_cooldown = 20 
+                # check if parry was executed:
+                if self.action == 7: 
+                    self.parrying = False
+                    self.parry_cooldown = 20
+        
+    
+    def update_action(self, new_action): 
+        # check if the new action is different from the previous one: 
+        if new_action != self.action: 
+            self.action = new_action
+            # reset the animation index too:
+            self.frame_index = 0
+            self.update_time = pygame.time.get_ticks()
+    
+
+    def parry(self, surface, target): 
+        # check if the character can parry: 
+        if self.parry_cooldown == 0:
+            self.parrying = True
+            
+            # draw the rectangle defining the parry hitbox:
+            parrying_rect = pygame.Rect(
+                self.rect.centerx - (2 * self.rect.width * self.flip), # self.flip ensures attack faces enemy
+                self.rect.y, 
+                1 * self.rect.width, # make parry rect pretty small to make it more skillful
+                self.rect.height
+            )
+           
+            # check for a successful parry: 
+            if parrying_rect.colliderect(target.attacking_rect):
+                print("parried bitch!")
+        
+            # TO-DO: DELETE
+            pygame.draw.rect(surface, (255, 255, 0), parrying_rect)
+    
     
     def attack(self, surface, target): 
-        """_summary_
-        """
-        self.attacking = True
+        # check if the character can attack: 
+        if self.attack_cooldown == 0:
+            self.attacking = True
+            # change the attack hitbox according to attack type:
+            if self.attack_type == 1: # (stronger, higher damage attack - like a top-down swing)
+                self.attacking_rect = pygame.Rect(
+                    self.rect.centerx - (2 * self.rect.width * self.flip), # self.flip ensures attack faces enemy
+                    self.rect.y, 
+                    2 * self.rect.width, 
+                    self.rect.height
+                )
+            else: # self.attack_type == 2 (longer range, less damage attack - like a spear jab)
+                self.attacking_rect = pygame.Rect(
+                    self.rect.centerx - (2 * self.rect.width * self.flip), # self.flip ensures attack faces enemy
+                    self.rect.centery - 0.25 * self.rect.height, 
+                    3 * self.rect.width, 
+                    0.5 * self.rect.height 
+                )
+            
+            # check for a successful hit: 
+            if self.attacking_rect.colliderect(target.rect):
+                if self.attack_type == 1: 
+                    target.health -= 10
+                else: # self.attack_type == 2: 
+                    target.health -= 5
+                target.hit = True
         
-        # TO-DO: RESET self.attacking TO ALLOW OTHER MOVEMENTS 
-        # TO-DO: MAKE attacking_rect DEPEND ON ATTACK TYPE AND CHANGE DIMS.
-        
-        attacking_rect = pygame.Rect(
-            self.rect.centerx - (2 * self.rect.width * self.flip), # self.flip ensures attack faces enemy
-            self.rect.y, 
-            2 * self.rect.width, 
-            self.rect.height
-        )
-        
-        if attacking_rect.colliderect(target.rect):
-           target.health -= 10
-        
-        # TO-DO: DELETE
-        pygame.draw.rect(surface, (0, 255, 0), attacking_rect)
+            # TO-DO: DELETE
+            pygame.draw.rect(surface, (0, 255, 0), self.attacking_rect)
         
     def draw(self, surface):
         """_summary_
@@ -160,7 +301,10 @@ class Fighter():
             surface (_type_): Game window we are drawing the character/fighter onto. 
         """
         img = pygame.transform.flip(self.image, self.flip, False)
-        pygame.draw.rect(surface, (255, 0, 0), self.rect)
+        
+        # uncomment to show rectangle character is drawn on top of: 
+        # pygame.draw.rect(surface, (255, 0, 0), self.rect)
+
         surface.blit(img, 
                         (self.rect.x - (self.offset[0] * self.image_scale), 
                          self.rect.y - (self.offset[1] * self.image_scale)

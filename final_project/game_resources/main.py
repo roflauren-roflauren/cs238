@@ -23,14 +23,14 @@ WHITE = (255, 255, 255)
 GREEN = (0, 255, 0)
 
 # define fighter variables: 
-KNIGHT_SIZE = 162 # number of pixels in one frame of the spritesheet (assumed to be a square)
+KNIGHT_SIZE = 150 # number of pixels in one frame of the spritesheet (assumed to be a square)
 KNIGHT_SCALE = 4  # how much to scale up individual images
-KNIGHT_OFFSET = [72, 56] # how much to offset the sprites by so they're centered on their underlying rectangles
+KNIGHT_OFFSET = [64, 50] # how much to offset the sprites by so they're centered on their underlying rectangles
 KNIGHT_DATA = [KNIGHT_SIZE, KNIGHT_SCALE, KNIGHT_OFFSET]
 
 # instantiate window object and window name:
 screen = pygame.display.set_mode(size=(SCREEN_WIDTH, SCREEN_HEIGHT))
-pygame.display.set_caption("Mortal (Q)ombat")
+pygame.display.set_caption("CS 238 presents: Mortal (Q)ombat")
 
 # load background image:
 bg_image = pygame.image.load("./game_resources/visual_assets/oak_woods_background/collated_forest_bg.png").convert_alpha()
@@ -38,10 +38,10 @@ bg_image = pygame.image.load("./game_resources/visual_assets/oak_woods_backgroun
 # TO-DO: REPLACE WITH DIFF. SPRITE SHEET
 
 # load spritesheets: 
-knight_sheet = pygame.image.load("./game_resources/visual_assets/sample_warrior_spritesheet.png").convert_alpha()
+knight_sheet = pygame.image.load("./game_resources/visual_assets/final_spritesheet.png").convert_alpha()
 
 # define number of steps/frames in each animation: 
-KNIGHT_ANIMATION_STEPS = [10, 8, 1, 7, 7, 3, 7]
+KNIGHT_ANIMATION_STEPS = [8, 8, 2, 4, 4, 4, 6, 3] # idle, run, jump, attack1, attack2, receive hit, die, parry
 
 # function which actually draws the background: 
 def draw_bg():
@@ -95,6 +95,10 @@ while game_is_running:
     
     # move fighters according to key presses: 
     fighter_1.move(SCREEN_WIDTH, SCREEN_HEIGHT, screen, fighter_2)
+    
+    # update fighter images/animations: 
+    fighter_1.update()
+    fighter_2.update()
     
     # draw fighters:
     fighter_1.draw(screen)
