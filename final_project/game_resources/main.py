@@ -22,6 +22,13 @@ YELLOW = (255, 255, 0)
 WHITE = (255, 255, 255)
 GREEN = (0, 255, 0)
 
+# define countdown & scoreboard variables: 
+intro_count = 2
+last_count_update = pygame.time.get_ticks()
+score = [0, 0] # player scores. [P1, P2]
+round_over = False
+ROUND_OVER_COOLDOWN = 1000 # millseconds
+
 # define fighter variables: 
 KNIGHT_SIZE = 150 # number of pixels in one frame of the spritesheet (assumed to be a square)
 KNIGHT_SCALE = 4  # how much to scale up individual images
@@ -30,18 +37,26 @@ KNIGHT_DATA = [KNIGHT_SIZE, KNIGHT_SCALE, KNIGHT_OFFSET]
 
 # instantiate window object and window name:
 screen = pygame.display.set_mode(size=(SCREEN_WIDTH, SCREEN_HEIGHT))
-pygame.display.set_caption("CS 238 presents: Mortal (Q)ombat")
+pygame.display.set_caption("A&A STUDIOS PRESENTS: MORTAL (Q)OMBAT")
 
 # load background image:
 bg_image = pygame.image.load("./game_resources/visual_assets/oak_woods_background/collated_forest_bg.png").convert_alpha()
 
-# TO-DO: REPLACE WITH DIFF. SPRITE SHEET
-
 # load spritesheets: 
 knight_sheet = pygame.image.load("./game_resources/visual_assets/final_spritesheet.png").convert_alpha()
+inverted_knight_sheet = pygame.image.load("./game_resources/visual_assets/spritesheet_inverted.png").convert_alpha()
 
 # define number of steps/frames in each animation: 
 KNIGHT_ANIMATION_STEPS = [8, 8, 2, 4, 4, 4, 6, 3] # idle, run, jump, attack1, attack2, receive hit, die, parry
+
+# define fonts: 
+count_font = pygame.font.Font("./game_resources/fonts/turok.ttf", 80)
+score_font = pygame.font.Font("./game_resources/fonts/turok.ttf", 30)
+
+# function for drawing text on the game screen: 
+def draw_text(text, font, text_col, x, y):
+    img = font.render(text, True, text_col)
+    screen.blit(img, (x, y))
 
 # function which actually draws the background: 
 def draw_bg():
@@ -71,8 +86,8 @@ def draw_health_bar(health, x, y):
 #######################
 
 # create two instances of fighters 
-fighter_1 = Fighter(200, 264, False, KNIGHT_DATA, knight_sheet, KNIGHT_ANIMATION_STEPS) 
-fighter_2 = Fighter(700, 264, True, KNIGHT_DATA, knight_sheet, KNIGHT_ANIMATION_STEPS)
+fighter_1 = Fighter(1, 200, 264, False, KNIGHT_DATA, knight_sheet, KNIGHT_ANIMATION_STEPS) 
+fighter_2 = Fighter(2, 700, 264, True, KNIGHT_DATA, inverted_knight_sheet, KNIGHT_ANIMATION_STEPS)
 
 
 #######################
@@ -89,12 +104,24 @@ while game_is_running:
     # draw background:
     draw_bg()
     
-    # show player stats: 
+    # show player stats (health and score): 
     draw_health_bar(fighter_1.health, 20, 20)
     draw_health_bar(fighter_2.health, 580, 20)
+    draw_text("P1: " + str(score[0]), score_font, RED, 20, 60)
+    draw_text("P2: " + str(score[1]), score_font, RED, 925, 60)
     
-    # move fighters according to key presses: 
-    fighter_1.move(SCREEN_WIDTH, SCREEN_HEIGHT, screen, fighter_2)
+    # if the round countdown is over: 
+    if intro_count <= 0: 
+        # move fighters according to key presses: 
+        fighter_1.move(SCREEN_WIDTH, SCREEN_HEIGHT, screen, fighter_2, round_over)
+        fighter_2.move(SCREEN_WIDTH, SCREEN_HEIGHT, screen, fighter_1, round_over)
+    else: 
+        # display countdown timer: 
+        draw_text(str(intro_count), count_font, RED, SCREEN_WIDTH / 2 - 12, SCREEN_HEIGHT / 10)
+        # decrement countdown
+        if pygame.time.get_ticks() - last_count_update >= 1000: 
+            intro_count -= 1
+            last_count_update = pygame.time.get_ticks()
     
     # update fighter images/animations: 
     fighter_1.update()
@@ -103,6 +130,23 @@ while game_is_running:
     # draw fighters:
     fighter_1.draw(screen)
     fighter_2.draw(screen)
+    
+    # check for player defeat: 
+    if round_over == False: 
+        if fighter_1.alive == False or fighter_2.alive == False: 
+            if fighter_1.alive == False: 
+                score[1] += 1
+            else: 
+                score[0] += 1
+            round_over = True
+            round_over_time = pygame.time.get_ticks()
+    else: # round over is true
+        if pygame.time.get_ticks() - round_over_time > ROUND_OVER_COOLDOWN: 
+            round_over = False
+            intro_count = 3
+            # reset the fighters (by re-instantiating them): 
+            fighter_1 = Fighter(1, 200, 264, False, KNIGHT_DATA, knight_sheet, KNIGHT_ANIMATION_STEPS) 
+            fighter_2 = Fighter(2, 700, 264, True, KNIGHT_DATA, inverted_knight_sheet, KNIGHT_ANIMATION_STEPS)
 
     # event handler: manual quit ('x' button in top-right corner)
     for event in pygame.event.get(): 
@@ -113,4 +157,4 @@ while game_is_running:
     pygame.display.update()
 
 # exit pygame after game loop terminates: 
-pygame.quit
+pygame.quit()
