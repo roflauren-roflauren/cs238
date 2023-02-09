@@ -33,7 +33,7 @@ ROUND_OVER_COOLDOWN = 1000 # millseconds
 KNIGHT_SIZE = 150 # number of pixels in one frame of the spritesheet (assumed to be a square)
 KNIGHT_SCALE = 4  # how much to scale up individual images
 KNIGHT_OFFSET = [64, 50] # how much to offset the sprites by so they're centered on their underlying rectangles
-KNIGHT_DATA = [KNIGHT_SIZE, KNIGHT_SCALE, KNIGHT_OFFSET]
+KNIGHT_DATA = [KNIGHT_SIZE, KNIGHT_SCALE, KNIGHT_OFFSET] 
 
 # instantiate window object and window name:
 screen = pygame.display.set_mode(size=(SCREEN_WIDTH, SCREEN_HEIGHT))
@@ -79,15 +79,15 @@ def draw_health_bar(health, x, y):
     ratio = health / 100
     pygame.draw.rect(screen, WHITE, (x - 3, y - 3, 406, 36)) # outline of health bars
     pygame.draw.rect(screen, RED, (x, y, 400, 30)) # underlying full (red) health for comparison
-    pygame.draw.rect(screen, GREEN, (x, y, 400 * ratio, 30)) # remaining health rect 
+    pygame.draw.rect(screen, GREEN, (x, y, 400 * ratio, 30)) # remaining health rect d
 
 #######################
 ###    GAME VARS    ###
 #######################
 
 # create two instances of fighters 
-fighter_1 = Fighter(1, 200, 264, False, KNIGHT_DATA, knight_sheet, KNIGHT_ANIMATION_STEPS) 
-fighter_2 = Fighter(2, 700, 264, True, KNIGHT_DATA, inverted_knight_sheet, KNIGHT_ANIMATION_STEPS)
+fighter_1 = Fighter(1, "HUMAN", 200, 264, False, KNIGHT_DATA, knight_sheet, KNIGHT_ANIMATION_STEPS) 
+fighter_2 = Fighter(2, "AI_RANDOM", 700, 264, True, KNIGHT_DATA, inverted_knight_sheet, KNIGHT_ANIMATION_STEPS)
 
 
 #######################
@@ -104,7 +104,7 @@ while game_is_running:
     # draw background:
     draw_bg()
     
-    # show player stats (health and score): 
+    # show player stats (health and score): k
     draw_health_bar(fighter_1.health, 20, 20)
     draw_health_bar(fighter_2.health, 580, 20)
     draw_text("P1: " + str(score[0]), score_font, RED, 20, 60)
@@ -113,15 +113,18 @@ while game_is_running:
     # if the round countdown is over: 
     if intro_count <= 0: 
         # move fighters according to key presses: 
-        fighter_1.move(SCREEN_WIDTH, SCREEN_HEIGHT, screen, fighter_2, round_over)
-        fighter_2.move(SCREEN_WIDTH, SCREEN_HEIGHT, screen, fighter_1, round_over)
-    else: 
+        fighter_1.move(SCREEN_WIDTH, SCREEN_HEIGHT, fighter_2, round_over)
+        fighter_2.move(SCREEN_WIDTH, SCREEN_HEIGHT, fighter_1, round_over)
+    else: # summary: decrement round start countdown timer 
         # display countdown timer: 
         draw_text(str(intro_count), count_font, RED, SCREEN_WIDTH / 2 - 12, SCREEN_HEIGHT / 10)
         # decrement countdown
         if pygame.time.get_ticks() - last_count_update >= 1000: 
             intro_count -= 1
             last_count_update = pygame.time.get_ticks()
+    
+    # process joint dependent actions: 
+    fighter_1.process_joint_actions(fighter_2)
     
     # update fighter images/animations: 
     fighter_1.update()
@@ -145,8 +148,8 @@ while game_is_running:
             round_over = False
             intro_count = 3
             # reset the fighters (by re-instantiating them): 
-            fighter_1 = Fighter(1, 200, 264, False, KNIGHT_DATA, knight_sheet, KNIGHT_ANIMATION_STEPS) 
-            fighter_2 = Fighter(2, 700, 264, True, KNIGHT_DATA, inverted_knight_sheet, KNIGHT_ANIMATION_STEPS)
+            fighter_1 = Fighter(1, "HUMAN", 200, 264, False, KNIGHT_DATA, knight_sheet, KNIGHT_ANIMATION_STEPS) 
+            fighter_2 = Fighter(2, "AI_RANDOM", 700, 264, True, KNIGHT_DATA, inverted_knight_sheet, KNIGHT_ANIMATION_STEPS)
 
     # event handler: manual quit ('x' button in top-right corner)
     for event in pygame.event.get(): 

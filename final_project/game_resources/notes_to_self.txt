@@ -1,0 +1,7 @@
+gameplay elements: 
+    1. worth fiddling arround with self.attack_cooldown and self.parry_cooldown (and self.action_cooldown) in fighter.py; 
+    a totally random AI can spam attacks very quickly making it nontrivial to defeat it!
+
+    2. maybe change the parry rect width to make parrying a little less difficult? right now it's set at 2 * self.rect.width which is pretty okay
+
+    3. maybe increase attack, parry, action cooldown if gameplay agent is AI?

@@ -1,10 +1,11 @@
 import pygame
+import random as rd
 
 CHAR_WIDTH  = 80
 CHAR_HEIGHT = 180
 
 class Fighter():
-    def __init__(self, player, x, y, start_flip, data, sprite_sheet, animation_steps):
+    def __init__(self, player, player_type, x, y, start_flip, data, sprite_sheet, animation_steps):
         """_summary_
 
         Args:
@@ -13,6 +14,14 @@ class Fighter():
         """
         # player 1 or player 2: 
         self.player = player
+        
+        # controller type (human or AI): 
+        self.player_type = player_type
+        # key press idxs for random AI input generation: 
+        self.keypress_idxs = {
+            "movement" : [(4, 80), (7, 79), (20, 82)],    # pygame.key.get_pressed() ScancodeWrapper()'s idxs for: [(a, l_arrow), (d, r_arrow), (w, up_arrow)]
+            "weapon"   : [(13, 89), (14, 90), (15, 91)]   #                                                        [(j, KP1),     (k, KP2),     (l, KP3)     ]                                 
+        }
         
         # retrieve the character size, scaling factor, and offset:
         self.size = data[0]
@@ -61,12 +70,7 @@ class Fighter():
         self.attack_cooldown = 0
         
         # character's attack rect (used to check for an effective parry by enemy):
-        self.attacking_rect = pygame.Rect(                    
-                    self.rect.x,
-                    self.rect.y, 
-                    self.rect.width, 
-                    self.rect.height
-        )
+        self.attacking_rect = pygame.Rect(0,0,0,0)
         
         # track whether character is parrying or not: 
         self.parrying = False 
@@ -74,6 +78,9 @@ class Fighter():
         # cooldown on parrying (prevents endless parrying):
         self.parry_cooldown = 0
         
+        # character's parrying rect (used to check for an effective parry against enemy):
+        self.parrying_rect = pygame.Rect(0,0,0,0)
+                
         # track whether character has been hit: 
         self.hit = False
         
@@ -82,6 +89,7 @@ class Fighter():
         
         # tracks dead or alive: 
         self.alive = True
+        
     
     def load_images(self, sprite_sheet, animation_steps):
         """_summary_
@@ -104,7 +112,7 @@ class Fighter():
             
         return animation_list
             
-    def move(self, screen_width, screen_height, surface, target, round_over):
+    def move(self, screen_width, screen_height, target, round_over):
         """_summary_
 
         Args:
@@ -119,9 +127,36 @@ class Fighter():
         self.running = False
         self.attack_type = 0
         
-        # get keypresses: 
+        # get keypresses:
         key = pygame.key.get_pressed()
+        # if player is human, just collect provided keypresses:
+        if self.player_type == "HUMAN":
+            key = pygame.key.get_pressed()  
+        # if player is AI (self.player_type == "AI_X"), follow policy to gen. keypresses:
+        else: 
+            if self.player_type == "AI_RANDOM": 
+                # list with bool for keypresses; will be 'False' for every keyboard input since agent is AI:
+                l_key = list(pygame.key.get_pressed())
+                
+                # generate random inputs for movement and weapon action (both inputs have an optional, null value; i.e., -1): 
+                movement_input, weapon_input = rd.randint(-1, 2), rd.randint(-1, 2)
+                
+                # map random ints to keypresses and update 'key' (i.e., keypress dictionary):
+                if movement_input != -1: 
+                    movement_key = self.keypress_idxs["movement"][movement_input][self.player - 1]
+                    l_key[movement_key] = True
+                if weapon_input != -1: 
+                    weapon_key = self.keypress_idxs["weapon"][weapon_input][self.player - 1]
+                    l_key[weapon_key] = True
+                    
+                # convert the keypress bool list back to pygame's ScancodeWrapper type:
+                key = pygame.key.ScancodeWrapper(l_key)
+                
+            else:
+                # intelligent AI decision making to go here! 
+                pass  
         
+        # move update notes: 
         # can only perform movement actions if:
         #   - not currently attacking;
         #   - not currently parrying; 
@@ -150,12 +185,12 @@ class Fighter():
                     else: 
                         self.attack_type = 2 # attack 2: sweeps low-to-high, medium damage
                     # call attack helper method: 
-                    self.attack(surface, target)
+                    self.attack()
                     
                 if key[pygame.K_l]: # parry
                     # call parry helper method:
-                    self.parry(surface, target)
-                    
+                    self.parry()
+
             # check player 2 controls: 
             if self.player == 2: 
                 # movement keypresses: 
@@ -176,10 +211,10 @@ class Fighter():
                     else: 
                         self.attack_type = 2 # attack 2: sweeps low-to-high, medium damage
                     # call attack helper method: 
-                    self.attack(surface, target)
+                    self.attack()
                     
                 if key[pygame.K_KP3]: # parry
-                    self.parry(surface, target)
+                    self.parry()
             
             
         # apply gravity: 
@@ -259,17 +294,20 @@ class Fighter():
                 # check if an attack was executed: 
                 if self.action == 3 or self.action == 4: 
                     self.attacking = False
-                    self.attack_cooldown = 20
+                    self.attack_cooldown = 40
+                    self.attacking_rect = pygame.Rect(0,0,0,0)
                 # check if attack was received: 
                 if self.action == 5: 
                     self.hit = False
                     # if the player was in the middle of an attack, then their attack is cancelled: 
                     self.attacking = False 
-                    self.attack_cooldown = 20 
+                    self.attack_cooldown = 40 
+                    self.attacking_rect = pygame.Rect(0,0,0,0)
                 # check if parry was executed:
                 if self.action == 7: 
                     self.parrying = False
-                    self.parry_cooldown = 20
+                    self.parry_cooldown = 40
+                    self.parrying_rect = pygame.Rect(0,0,0,0)
         
     
     def update_action(self, new_action): 
@@ -281,30 +319,21 @@ class Fighter():
             self.update_time = pygame.time.get_ticks()
     
 
-    def parry(self, surface, target): 
+    def parry(self): 
         # check if the character can parry: 
         if self.parry_cooldown == 0:
             self.parrying = True
             
             # draw the rectangle defining the parry hitbox:
-            parrying_rect = pygame.Rect(
+            self.parrying_rect = pygame.Rect(
                 self.rect.centerx - (2 * self.rect.width * self.flip), # self.flip ensures attack faces enemy
                 self.rect.y, 
-                1 * self.rect.width, # make parry rect pretty small to make it more skillful
+                2 * self.rect.width, # make parry rect pretty small to make it more skillful
                 self.rect.height
             )
-           
-            # check for a successful parry (attack rect only collides with parrying rect and not player rect, target is attacking): 
-            # if parrying_rect.colliderect(target.attacking_rect) and not target.attacking_rect.colliderect(self.rect):
-            #     print("haha parried biatch!")
-            #     # stun lock penalty for parried player (can't make this too long or else parrying player automatically wins): 
-            #     target.action_cooldown = 1000
 
-            # TO-DO: DELETE (REMOVE SURFACE FROM PARAMS AND CALLS)
-            pygame.draw.rect(surface, (255, 255, 0), parrying_rect)
-    
-    
-    def attack(self, surface, target): 
+
+    def attack(self): 
         # check if the character can attack: 
         if self.attack_cooldown == 0:
             self.attacking = True
@@ -313,31 +342,47 @@ class Fighter():
                 self.attacking_rect = pygame.Rect(
                     self.rect.centerx - (2 * self.rect.width * self.flip), # self.flip ensures attack faces enemy
                     self.rect.y, 
-                    2 * self.rect.width, 
+                    2.5 * self.rect.width, 
                     self.rect.height
                 )
             else: # self.attack_type == 2 (longer range, less damage attack - like a spear jab)
                 self.attacking_rect = pygame.Rect(
                     self.rect.centerx - (3 * self.rect.width * self.flip), # self.flip ensures attack faces enemy
                     self.rect.centery, 
-                    3.5 * self.rect.width, 
+                    3.25 * self.rect.width, 
                     0.25 * self.rect.height 
                 )
+    
+    
+    def process_joint_actions(self, target):
+        # if self attacks: 
+        if self.attacking == True:
+            # if target successfully parries: 
+            if target.parrying == True and self.attacking_rect.colliderect(target.parrying_rect): 
+                self.action_cooldown = 150
+            # else (if) target either did not parry, or they did but unsuccessfully: 
+            else:
+                if self.attacking_rect.colliderect(target.rect):
+                    if self.attack_type == 1: 
+                        target.health -= .75
+                    else: # self.attack_type == 2: 
+                        target.health -= .20
+                    target.hit = True
+                    
+        # if opponent is attacking: 
+        if target.attacking == True: 
+            # if self successfully parries: 
+            if self.parrying == True and self.parrying_rect.colliderect(target.attacking_rect): 
+                target.action_cooldown = 150
+            # else (if) self either did not parry, or they did but unsuccessfully: 
+            else:
+                if target.attacking_rect.colliderect(self.rect):
+                    if target.attack_type == 1: 
+                        self.health -= .75
+                    else: # self.attack_type == 2: 
+                        self.health -= .20
+                    self.hit = True
             
-            # check for a successful hit: 
-            if self.attacking_rect.colliderect(target.rect):
-                if self.attack_type == 1: 
-                    target.health -= 10
-                else: # self.attack_type == 2: 
-                    target.health -= 5
-                target.hit = True
-        
-            # TO-DO: DELETE (REMOVE SURFACE FROM PARAMS AND CALLS)
-            pygame.draw.rect(surface, (0, 255, 0), self.attacking_rect)
-    
-    
-    # TO-DO: CREATE JOINT PLAYER PROCESSING FUNCTION TO CALL BEFORE 'fighter_1.update() / fighter_2.update()' in main.py
-        # include: joint attack/parry processing
     
     def draw(self, surface):
         """_summary_
