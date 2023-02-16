@@ -1,0 +1,7 @@
+small.csv:
+    - train (q-learning): 0.328 seconds 
+    - total: 0.343 seconds
+
+medium.csv:
+    - train (q-learning): 11.518
+    - total: 11.746

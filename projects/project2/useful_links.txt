@@ -1,0 +1,4 @@
+policy from q-table:
+    - https://ai.stackexchange.com/questions/25971/what-is-a-learned-policy-in-q-learning#:~:text=A%20Q%20table%20allows%20you%20to,is%20not%20itself%20a%20policy.
+q-learning update: 
+    - https://stanford-cs221.github.io/autumn2022-extra/modules/mdps/q-learning.pdf
