@@ -2,6 +2,22 @@ small.csv:
     - train (q-learning): 0.328 seconds 
     - total: 0.343 seconds
 
+    - optimal params/notes:
+        - had a min. state val. - if Q(s,a*) < min_state_val, 
+         selected action that moved toward max value state 
+         instead of a* = max_a Q(s,a)
+         - default st val: 0
+         - eta: 0.05
+
 medium.csv:
-    - train (q-learning): 11.518
-    - total: 11.746
+    - train (q-learning): 26.826
+    - total: 27.058
+
+    - optimal params/notes:
+        - if state value after q-learning is still default, just picked random action 
+          for policy.
+        - reward shaping: subtract distance from goal (assumed to be right-most position) 
+                          from reward to encourage progression toward goal. 
+        - default st val: -500
+        - eta: 0.05
+        - train loops: 3

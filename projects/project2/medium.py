@@ -1,4 +1,4 @@
-# imports: 
+## imports: 
 import time 
 import numpy as np 
 import pandas as pd 
@@ -10,16 +10,18 @@ NUM_VEL_VALS = 100
 NUM_POS_VALS = 500
 # actions - indicating amounts of acceleration.
 ACTIONS = [1, 2, 3, 4, 5, 6, 7] 
-# discount rate
+# discount rate:
 lmb = 1 
 
 ## hyperparameters: 
 # default value for states: 
-st_val_dft = 300 
+st_val_dft = -300
 # interpolation rate for q-learning  
 eta = 0.05
+# number of times to loop through training data:
+num_replays = 3
 
-## other:
+## other constants:
 # random seed: 
 rd.seed(238)
 
@@ -29,21 +31,25 @@ def q_learning(data):
     q_opt = np.full(shape=(len(ACTIONS), NUM_VEL_VALS, NUM_POS_VALS), fill_value=st_val_dft) 
     v_opt = np.full(shape=(NUM_VEL_VALS, NUM_POS_VALS), fill_value=st_val_dft)
     
-    # iterate through episodes and conduct q-learning! 
-    for episode in data.values:
-        # extract episode information:
-        s, a, r, sp = episode[0], episode[1], episode[2], episode[3]
+    for _ in range(num_replays):
+        # iterate through episodes and conduct q-learning! 
+        for episode in data.values:
+            # extract episode information:
+            s, a, r, sp = episode[0], episode[1], episode[2], episode[3]
 
-        # convert s, sp to indices into state-value & value matrices 
-        (s_r, s_c)   = np.unravel_index(s, shape=(NUM_VEL_VALS, NUM_POS_VALS))
-        (sp_r, sp_c) = np.unravel_index(sp, shape=(NUM_VEL_VALS, NUM_POS_VALS))
+            # convert s, sp to indices into state-value & value matrices 
+            (s_r, s_c)   = np.unravel_index(s,  shape=(NUM_VEL_VALS, NUM_POS_VALS))
+            (sp_r, sp_c) = np.unravel_index(sp, shape=(NUM_VEL_VALS, NUM_POS_VALS))
 
-        # apply q-learning update (i.e., updating the state-action value matrix): 
-        # equ: q_opt(s,a) <- (1 - eta) * q_opt(s,a) + eta * (r + lmb * v_opt(sp))
-        q_opt[a-1][s_r][s_c] = (1 - eta) * q_opt[a-1][s_r][s_c] + eta * (r + lmb * v_opt[sp_r][sp_c])
-        
-        # update the state value matrix: 
-        v_opt = q_opt.max(axis=0)
+            # *manual* reward shaping - subtract from 'r' distance to goal: 
+            r -= (NUM_POS_VALS - s_c)
+
+            # apply q-learning update (i.e., updating the state-action value matrix): 
+            # equ: q_opt(s,a) <- (1 - eta) * q_opt(s,a) + eta * (r + lmb * v_opt(sp))
+            q_opt[a-1][s_r][s_c] = (1 - eta) * q_opt[a-1][s_r][s_c] + eta * (r + lmb * v_opt[sp_r][sp_c])
+            
+            # update the state value matrix: 
+            v_opt = q_opt.max(axis=0)
             
     return q_opt
 
@@ -86,14 +92,14 @@ def main():
     q_learning_start_time = time.time() 
     q_opt = q_learning(data)
     print("Q-learning took: --- %s seconds ---" 
-          % round((time.time() - q_learning_start_time), 10))
+          % round((time.time() - q_learning_start_time), 3))
     
     # extract and write policy to file: 
     extract_policy(q_opt, './policy_files/medium.policy')
     
     # report program runtime: 
     print("Overall program took: --- %s seconds ---" 
-          % round((time.time() - program_start_time), 10))
+          % round((time.time() - program_start_time), 3))
     
 
 if __name__ == "__main__":

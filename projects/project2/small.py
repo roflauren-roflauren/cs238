@@ -1,4 +1,4 @@
-# imports: 
+## imports: 
 import time 
 import numpy as np 
 import pandas as pd 
@@ -7,16 +7,16 @@ import pandas as pd
 # grid world dims:
 NUM_GRID_ROWS = 10 
 NUM_GRID_COLS = 10 
-# actions - 1: left, 2: right, 3: up, 4: down
+# actions - 1: left, 2: right, 3: up, 4: down.
 ACTIONS = [1, 2, 3, 4] 
-# discount rate
+# discount rate:
 lmb = 0.95 
 
 ## hyperparameters:
-# interpolation rate for q-learning  
+# interpolation rate for q-learning:
 eta = 0.05
 # minimum val. s.t. the extracted policy will prescribe taking the action which
-# produces this value instead of just moving toward the maximum value state. 
+# produces this value instead of just moving toward the maximum value state:
 min_state_val = 1
 
 def get_state(grid_pos): 
@@ -122,14 +122,14 @@ def main():
     q_learning_start_time = time.time() 
     q_opt, v_opt = q_learning(data)
     print("Q-learning took: --- %s seconds ---" 
-          % round((time.time() - q_learning_start_time), 10))
+          % round((time.time() - q_learning_start_time), 3))
     
     # extract and write policy to file: 
     extract_policy(q_opt, v_opt, './policy_files/small.policy')
     
     # report program runtime: 
     print("Overall program took: --- %s seconds ---" 
-          % round((time.time() - program_start_time), 10))
+          % round((time.time() - program_start_time), 3))
     
 
 if __name__ == "__main__":
