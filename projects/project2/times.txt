@@ -13,7 +13,7 @@ medium.csv:
     - train (q-learning): 26.826
     - total: 27.058
 
-    - optimal params/notes:
+    - used params/notes:
         - if state value after q-learning is still default, just picked random action 
           for policy.
         - reward shaping: subtract distance from goal (assumed to be right-most position) 
@@ -21,3 +21,14 @@ medium.csv:
         - default st val: -500
         - eta: 0.05
         - train loops: 3
+
+large.csv:
+    - train: 7958 seconds 
+    - policy extraction: 139 
+    - overall: 8097 
+
+    - used params/notes: 
+      - two hidden layers, 12 nodes in each 
+      - 20 replays 
+      - lr: 6e-4
+      - copy weights to target from training nn every 1000 episodes

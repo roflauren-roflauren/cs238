@@ -35,7 +35,7 @@ class Fighter():
         self.animation_list = self.load_images(sprite_sheet, animation_steps)
         
         # maintains what action the character is doing 
-        # 0: idle, 1: run, 2: jump, 3: attack1, 4: attack2, 5: hit, 6: death
+        # 0: idle, 1: run, 2: jump, 3: attack1, 4: attack2, 5: hit, 6: death, 7: parry.
         self.action = 0
         
         # cooldown on any action (for tracking stun lock penalty from successful enemy parry):

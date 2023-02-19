@@ -2,12 +2,17 @@
 import time 
 import numpy  as np 
 import pandas as pd 
+import random as rd 
 
 import torch 
 import torch.nn as nn 
 import torch.nn.functional as F
 
 ## environment specs: 
+# number of states: 
+NUM_STATES = 312020
+# number of digits in max index state:
+MAX_STATES_DIGITS = 6
 # actions: mysteries! 
 ACTIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9] 
 # discount rate:
@@ -17,20 +22,21 @@ lmb = 0.95
 # number of nodes in hidden layer: 
 NUM_HIDDEN_NODES = 12
 # learning rate: 
-lr = 1e-4
+lr = 6e-4
 # number of times to loop through training data:
-num_replays = 5
+num_replays = 20
 # number of episodes to process before transferring
 # training NN weights to target NN: 
-num_episodes_per_copy = 2000
+num_episodes_per_copy = 1000
 
 ## other constants: 
-NUM_INPUTS = 6
+NUM_INPUTS = 12
 KEY_STATES = [150000, 230000, 270000, 290000, 300000]
+rd.seed(238)
 
 
 class DeepQNN(nn.Module):
-    """ Neural network for deep Q-learning."""
+    """ A simple 3-layer neural network for deep Q-learning."""
     def __init__(self): 
         super().__init__()
         # create layers:
@@ -50,13 +56,23 @@ class DeepQNN(nn.Module):
 
 
 def construct_state_nn_input_tensor(s): 
+    # nn input vector consists of state idx: 
     ret = [s]
+    # distance to key states with high/low rewards:
     for state_val in KEY_STATES: 
         ret.append(s - state_val)
+    digits = [int(d) for d in str(s)]
+    # digits of state index as individual features: 
+    if len(digits) < MAX_STATES_DIGITS: 
+        # pad with 0's if necessary
+        ret = ret + ([0] * (MAX_STATES_DIGITS - len(digits))) + digits
+    else: 
+        ret = ret + digits
     return torch.Tensor(ret)
 
 
 def main(): 
+    ## initializations and data:
     # program time bookkeeping:
     program_start_time = time.time()
     
@@ -79,6 +95,7 @@ def main():
     # training time bookkeeping: 
     training_start_time = time.time()
     
+    ## kick off training!
     # for each training data loop: 
     for replay_idx in range(num_replays):
         # bookkeeping: report which training data replay loop we're on.
@@ -116,11 +133,48 @@ def main():
                 print("Average loss in last 5000 episodes: {avg_loss}".format(avg_loss = np.mean(ep_losses)))
                 # bookkeeping: reset loss log:
                 ep_losses = []
+    
+    # report network training time: 
+    print("Deep Q-learning took: --- %s seconds ---"
+          % round((time.time() - training_start_time)))
+    
+    # save training and target networks weights: 
+    torch.save(train_nn.state_dict(),  "./large_model_weights/train_nn.params")
+    torch.save(target_nn.state_dict(), "./large_model_weights/target_nn.params")
+    
+    # policy extraction/eval. time bookkeeping: 
+    policy_extraction_start_time = time.time()
+    
+    ## extract and write policy to file: 
+    # create a file writer: 
+    with open('./policy_files/large.policy', 'w') as f: 
+        # iterate through states: 
+        for state_num in range(NUM_STATES): 
+            # increment state number (since Python is 0-index'd):
+            state_num += 1 
+            # construct state vector for this state: 
+            s_nn_rep = construct_state_nn_input_tensor(state_num).to(device)
+            # compute the state-action values for this state: 
+            q_vals = target_nn(s_nn_rep)
+            # init. the max Q-val idx:
+            max_action_idx = 0
+            try: 
+                # extract the index of the action with the maximum q_val: 
+                max_action_idx = q_vals.detach().cpu().numpy().argmax() + 1 # increment by 1 b/c Python is 0-index'd
+            except:
+                # in case anything goes wrong, just gen. a random action: 
+                max_action_idx = rd.choice(ACTIONS)
+            # write extracted action to policy file: 
+            f.write(str(max_action_idx)+'\n')
+    
+    ## program time bookkeeping:
+    # report policy evaluation time: 
+    print("Policy extraction took: --- %s seconds ---"
+          % round(time.time() - policy_extraction_start_time))
+        
+    # report program runtime: 
+    print("Overall program took: --- %s seconds ---"
+          % round(time.time() - program_start_time))
 
-    # TODO: print different times taken
-    # TODO: extract policy from target nn, write to file
-    
-    
-    
 if __name__ == "__main__":
     main()
