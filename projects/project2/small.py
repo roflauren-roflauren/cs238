@@ -10,7 +10,7 @@ NUM_GRID_COLS = 10
 # actions - 1: left, 2: right, 3: up, 4: down.
 ACTIONS = [1, 2, 3, 4] 
 # discount rate:
-lmb = 0.95 
+gamma = 0.95 
 
 ## hyperparameters:
 # interpolation rate for q-learning:
@@ -37,8 +37,8 @@ def q_learning(data):
         s, a, r, sp = get_state(episode[0]), episode[1], episode[2], get_state(episode[3])
 
         # apply q-learning update (i.e., updating the state-action value matrix): 
-        # equ: q_opt(s,a) <- (1 - eta) * q_opt(s,a) + eta * (r + lmb * v_opt(sp))
-        q_opt[a-1][s[0]][s[1]] = (1 - eta) * q_opt[a-1][s[0]][s[1]] + eta * (r + lmb * v_opt[sp[0]][sp[1]])
+        # equ: q_opt(s,a) <- (1 - eta) * q_opt(s,a) + eta * (r + gamma * v_opt(sp))
+        q_opt[a-1][s[0]][s[1]] = (1 - eta) * q_opt[a-1][s[0]][s[1]] + eta * (r + gamma * v_opt[sp[0]][sp[1]])
         
         # update the state value matrix: 
         v_opt = q_opt.max(axis=0)

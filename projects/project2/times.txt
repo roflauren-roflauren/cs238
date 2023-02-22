@@ -10,8 +10,8 @@ small.csv:
          - eta: 0.05
 
 medium.csv:
-    - train (q-learning): 26.826
-    - total: 27.058
+    - train (q-learning): 26.826 s
+    - total: 27.058 s
 
     - used params/notes:
         - if state value after q-learning is still default, just picked random action 
@@ -22,13 +22,17 @@ medium.csv:
         - eta: 0.05
         - train loops: 3
 
-large.csv:
-    - train: 7958 seconds 
-    - policy extraction: 139 
-    - overall: 8097 
+large.csv (submission 56):
+    - score: 14.872
+    - train: 794.009 s
+    - total: 795.574 s
 
-    - used params/notes: 
-      - two hidden layers, 12 nodes in each 
-      - 20 replays 
-      - lr: 6e-4
-      - copy weights to target from training nn every 1000 episodes
+    - used params/notes:
+      - if state value after q-learning is still default, just picked random action 
+          for policy.
+      - st_val_dft: 0
+      - num replays: 5 
+      - (decaying) eta: 0.25, -0.05 after each (non-initial) replay 
+      - used replay buffer: batch_size = 32
+      - other attempted approaches: build T,R model from data and do async VI, deep Q NN (Q with NN func. approx. + train & target networks)
+      
