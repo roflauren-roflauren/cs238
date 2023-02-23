@@ -11,7 +11,7 @@ NUM_POS_VALS = 500
 # actions - indicating amounts of acceleration.
 ACTIONS = [1, 2, 3, 4, 5, 6, 7] 
 # discount rate:
-lmb = 1 
+gamma = 1 
 
 ## hyperparameters: 
 # default value for states: 
@@ -45,8 +45,8 @@ def q_learning(data):
             r -= (NUM_POS_VALS - s_c)
 
             # apply q-learning update (i.e., updating the state-action value matrix): 
-            # equ: q_opt(s,a) <- (1 - eta) * q_opt(s,a) + eta * (r + lmb * v_opt(sp))
-            q_opt[a-1][s_r][s_c] = (1 - eta) * q_opt[a-1][s_r][s_c] + eta * (r + lmb * v_opt[sp_r][sp_c])
+            # equ: q_opt(s,a) <- (1 - eta) * q_opt(s,a) + eta * (r + gamma * v_opt(sp))
+            q_opt[a-1][s_r][s_c] = (1 - eta) * q_opt[a-1][s_r][s_c] + eta * (r + gamma * v_opt[sp_r][sp_c])
             
             # update the state value matrix: 
             v_opt = q_opt.max(axis=0)

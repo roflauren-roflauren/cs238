@@ -29,15 +29,9 @@ score = [0, 0] # player scores. [P1, P2]
 round_over = False
 ROUND_OVER_COOLDOWN = 1000 # millseconds
 
-# define fighter variables: 
-KNIGHT_SIZE = 150 # number of pixels in one frame of the spritesheet (assumed to be a square)
-KNIGHT_SCALE = 4  # how much to scale up individual images
-KNIGHT_OFFSET = [64, 50] # how much to offset the sprites by so they're centered on their underlying rectangles
-KNIGHT_DATA = [KNIGHT_SIZE, KNIGHT_SCALE, KNIGHT_OFFSET] 
-
 # instantiate window object and window name:
 screen = pygame.display.set_mode(size=(SCREEN_WIDTH, SCREEN_HEIGHT))
-pygame.display.set_caption("A&A STUDIOS PRESENTS: MORTAL (Q)OMBAT")
+pygame.display.set_caption("MORTAL (Q)OMBAT")
 
 # load background image:
 bg_image = pygame.image.load("./game_resources/visual_assets/oak_woods_background/collated_forest_bg.png").convert_alpha()
@@ -45,9 +39,6 @@ bg_image = pygame.image.load("./game_resources/visual_assets/oak_woods_backgroun
 # load spritesheets: 
 knight_sheet = pygame.image.load("./game_resources/visual_assets/final_spritesheet.png").convert_alpha()
 inverted_knight_sheet = pygame.image.load("./game_resources/visual_assets/spritesheet_inverted.png").convert_alpha()
-
-# define number of steps/frames in each animation: 
-KNIGHT_ANIMATION_STEPS = [8, 8, 2, 4, 4, 4, 6, 3] # idle, run, jump, attack1, attack2, receive hit, die, parry
 
 # define fonts: 
 count_font = pygame.font.Font("./game_resources/fonts/turok.ttf", 80)
@@ -60,21 +51,11 @@ def draw_text(text, font, text_col, x, y):
 
 # function which actually draws the background: 
 def draw_bg():
-    """_summary_
-    Utility function which actually draws the background image on the game screen.
-    """
     scaled_bg = pygame.transform.scale(bg_image, size=(SCREEN_WIDTH, SCREEN_HEIGHT))
     screen.blit(scaled_bg, dest=(0, 0)) # (0, 0) is top-left corner
     
 # function which draws fighter healthbars: 
 def draw_health_bar(health, x, y): 
-    """_summary_
-
-    Args:
-        health (_type_): _description_
-        x (_type_): _description_
-        y (_type_): _description_d
-    """
     # ratio of remaining health (100 is max):
     ratio = health / 100
     pygame.draw.rect(screen, WHITE, (x - 3, y - 3, 406, 36)) # outline of health bars
@@ -86,9 +67,8 @@ def draw_health_bar(health, x, y):
 #######################
 
 # create two instances of fighters 
-fighter_1 = Fighter(1, "HUMAN", 200, 264, False, KNIGHT_DATA, knight_sheet, KNIGHT_ANIMATION_STEPS) 
-fighter_2 = Fighter(2, "AI_RANDOM", 700, 264, True, KNIGHT_DATA, inverted_knight_sheet, KNIGHT_ANIMATION_STEPS)
-
+fighter_1 = Fighter(1, "HUMAN", 200, 264, False, knight_sheet) 
+fighter_2 = Fighter(2, "HUMAN", 700, 264, True,  inverted_knight_sheet)
 
 #######################
 ###    GAME LOOP    ###
@@ -104,7 +84,7 @@ while game_is_running:
     # draw background:
     draw_bg()
     
-    # show player stats (health and score): k
+    # show player stats (health and score):
     draw_health_bar(fighter_1.health, 20, 20)
     draw_health_bar(fighter_2.health, 580, 20)
     draw_text("P1: " + str(score[0]), score_font, RED, 20, 60)
@@ -148,8 +128,8 @@ while game_is_running:
             round_over = False
             intro_count = 3
             # reset the fighters (by re-instantiating them): 
-            fighter_1 = Fighter(1, "HUMAN", 200, 264, False, KNIGHT_DATA, knight_sheet, KNIGHT_ANIMATION_STEPS) 
-            fighter_2 = Fighter(2, "AI_RANDOM", 700, 264, True, KNIGHT_DATA, inverted_knight_sheet, KNIGHT_ANIMATION_STEPS)
+            fighter_1 = Fighter(1, "HUMAN", 200, 264, False, knight_sheet) 
+            fighter_2 = Fighter(2, "HUMAN", 700, 264, True,  inverted_knight_sheet)
 
     # event handler: manual quit ('x' button in top-right corner)
     for event in pygame.event.get(): 

@@ -3,6 +3,7 @@ import time
 import numpy  as np
 import pandas as pd 
 import random as rd 
+import pygame as pg
 
 import torch 
 import torch.nn as nn 
@@ -18,7 +19,7 @@ class Trainer():
         load_prev_params : bool = False, 
         params_path : str = None
     ):
-        """Initializes the Trainer object."""
+        """ Initializes the Trainer object. """
         super().__init__()
         # register the device to be used for training: 
         self.device = device 
@@ -47,7 +48,7 @@ class Trainer():
         num_episodes_per_save = 10000,
         model_params_save_dir = "../model_params/"
     ):
-        """This function actually performs the NN training.""" 
+        """ This function actually performs the NN training. """ 
         # initialize the optimizer: 
         if optimizer_type == "Adam":
             self.optimizer = torch.optim.Adam(self.train_nn.parameters(), lr = lr)
@@ -110,7 +111,10 @@ class Trainer():
                     s, a, r, sp, t, = self.replay_buffer.sample(replay_batch_size)
                     # TODO: TRAIN THE NN (write train_step function for this?)
                         # if the train_step function, pass in the 'discount_factor' parameter for target calculation!
-                
+        
+        # kill the game: 
+        # del GAME_OBJ
+        
         # report the total time elapsed during training: 
         print("Agent training using {num_games} training games took: {train_time} seconds".format(
             num_games = num_train_games, train_time = round((time.time() - train_time_start), 3)

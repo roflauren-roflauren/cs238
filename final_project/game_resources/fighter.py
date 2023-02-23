@@ -1,17 +1,27 @@
 import pygame
+
+import numpy  as np 
 import random as rd
 
-CHAR_WIDTH  = 80
-CHAR_HEIGHT = 180
+## static character graphic constants: 
+# height and width in pixels: 
+CHAR_HEIGHT, CHAR_WIDTH = 180, 80
+# number of pixels in one frame of the spritesheet:
+KNIGHT_SIZE   = 150 
+# how much to scale up individual spritesheet images:
+KNIGHT_SCALE  = 4
+# how much to offset the sprites by so they're centered on the character rectangles:
+KNIGHT_OFFSET = [64, 50]
+# package the sprite sheet constants together: 
+KNIGHT_DATA = [KNIGHT_SIZE, KNIGHT_SCALE, KNIGHT_OFFSET] 
+
+## number of steps/frames in each action animation: 
+# idle, run, jump, attack1, attack2, receive hit, die, parry
+KNIGHT_ANIMATION_STEPS = [8, 8, 2, 4, 4, 4, 6, 3] 
 
 class Fighter():
-    def __init__(self, player, player_type, x, y, start_flip, data, sprite_sheet, animation_steps):
-        """_summary_
-
-        Args:
-            x (int): left-coord where fighter will be instantiated. 
-            y (int): top-coord where fighter will be instantiated. 
-        """
+    """ This class represents a game character and their attributes and dynamics."""
+    def __init__(self, player, player_type, x, y, start_flip, sprite_sheet):
         # player 1 or player 2: 
         self.player = player
         
@@ -24,15 +34,15 @@ class Fighter():
         }
         
         # retrieve the character size, scaling factor, and offset:
-        self.size = data[0]
-        self.image_scale = data[1]
-        self.offset = data[2]
+        self.size        = KNIGHT_DATA[0]
+        self.image_scale = KNIGHT_DATA[1]
+        self.offset      = KNIGHT_DATA[2]
         
         # ensures that character faces target:
         self.flip = start_flip
         
         # list of sprite images for different actions
-        self.animation_list = self.load_images(sprite_sheet, animation_steps)
+        self.animation_list = self.load_images(sprite_sheet, KNIGHT_ANIMATION_STEPS)
         
         # maintains what action the character is doing 
         # 0: idle, 1: run, 2: jump, 3: attack1, 4: attack2, 5: hit, 6: death, 7: parry.
@@ -89,15 +99,8 @@ class Fighter():
         
         # tracks dead or alive: 
         self.alive = True
-        
-    
+           
     def load_images(self, sprite_sheet, animation_steps):
-        """_summary_
-
-        Args:
-            sprite_sheet (_type_): _description_
-            animation_steps (_type_): _description_
-        """
         # extract images from spritesheet:
         animation_list = []
         for y, animation in enumerate(animation_steps):
@@ -111,14 +114,37 @@ class Fighter():
             animation_list.append(temp_img_list)
             
         return animation_list
+    
+    def get_state(self, target):
+        # TODO: WRITE ME! 
+        # Will return a state representation for the current fighter as a...numpy array? Torch tensor? idk yet
             
-    def move(self, screen_width, screen_height, target, round_over):
-        """_summary_
-
-        Args:
-            screen_width (_type_): _description_
-            screen_height (_type_): _description_
-        """
+    def parse_keys_from_action_idx(self, action_idx : int): 
+        # TODO: WRITE MEEEE!!!
+    
+    def gen_random_move(self): 
+        # list with bool for keypresses; will be 'False' for every keyboard input since agent is AI:
+        l_key = list(pygame.key.get_pressed())
+        
+        # generate random inputs for movement and weapon action (both inputs have an optional, null value; i.e., -1): 
+        movement_input, weapon_input = rd.randint(-1, 2), rd.randint(-1, 2)
+        
+        # map random ints to keypresses and update 'key' (i.e., keypress dictionary):
+        if movement_input != -1: 
+            movement_key = self.keypress_idxs["movement"][movement_input][self.player - 1]
+            l_key[movement_key] = True
+        if weapon_input != -1: 
+            weapon_key = self.keypress_idxs["weapon"][weapon_input][self.player - 1]
+            l_key[weapon_key] = True
+            
+        # convert and return the keypress bool list back to pygame's ScancodeWrapper type:
+        return pygame.key.ScancodeWrapper(l_key)
+    
+    def move(self, 
+        screen_width, screen_height, 
+        target, round_over, 
+        action_idx = None  # action should be non-NULL if self.player_type = "AI_TRAINER"
+    ):
         SPEED = 10     # controls how quickly characters are moving on the screen
         GRAVITY = 2    # counters jumping & ensures player doesn't fly off screen
         dx, dy = 0, 0  # change in x, y coordinate of character
@@ -127,44 +153,22 @@ class Fighter():
         self.running = False
         self.attack_type = 0
         
-        # get keypresses:
-        key = pygame.key.get_pressed()
-        # if player is human, just collect provided keypresses:
         if self.player_type == "HUMAN":
-            key = pygame.key.get_pressed()  
-        # if player is AI (self.player_type == "AI_X"), follow policy to gen. keypresses:
+            key = pygame.key.get_pressed()
         else: 
             if self.player_type == "AI_RANDOM": 
-                # list with bool for keypresses; will be 'False' for every keyboard input since agent is AI:
-                l_key = list(pygame.key.get_pressed())
-                
-                # generate random inputs for movement and weapon action (both inputs have an optional, null value; i.e., -1): 
-                movement_input, weapon_input = rd.randint(-1, 2), rd.randint(-1, 2)
-                
-                # map random ints to keypresses and update 'key' (i.e., keypress dictionary):
-                if movement_input != -1: 
-                    movement_key = self.keypress_idxs["movement"][movement_input][self.player - 1]
-                    l_key[movement_key] = True
-                if weapon_input != -1: 
-                    weapon_key = self.keypress_idxs["weapon"][weapon_input][self.player - 1]
-                    l_key[weapon_key] = True
-                    
-                # convert the keypress bool list back to pygame's ScancodeWrapper type:
-                key = pygame.key.ScancodeWrapper(l_key)
-                
-            else:
-                # intelligent AI decision making to go here! 
-                pass  
+                key = self.gen_random_move() 
+            if self.player_type == "AI_TRAINER" and action_idx is not None: 
+                key = self.parse_keys_from_action_idx(action_idx)
         
         # move update notes: 
         # can only perform movement actions if:
         #   - not currently attacking;
         #   - not currently parrying; 
-        #   - not stun-locked;
+        #   - not stun-locked (i.e., self.action_cooldown == 0);
         #   - not dead;
-        #   - round isn't over & resetting: 
+        #   - round isn't over and in the process of resetting: 
         if self.attacking == False and self.parrying == False and self.action_cooldown == 0 and self.alive == True and round_over == False:
-            
             # check player 1 controls: 
             if self.player == 1: 
                 # movement keypresses: 
@@ -216,7 +220,6 @@ class Fighter():
                 if key[pygame.K_KP3]: # parry
                     self.parry()
             
-            
         # apply gravity: 
         self.vel_y += GRAVITY
         dy += self.vel_y
@@ -252,8 +255,7 @@ class Fighter():
         # update player positions: 
         self.rect.x += dx
         self.rect.y += dy
-       
-    
+           
     def update(self):
         # check what action the player is performing: 
         if self.health <= 0: 
@@ -308,8 +310,7 @@ class Fighter():
                     self.parrying = False
                     self.parry_cooldown = 40
                     self.parrying_rect = pygame.Rect(0,0,0,0)
-        
-    
+           
     def update_action(self, new_action): 
         # check if the new action is different from the previous one: 
         if new_action != self.action: 
@@ -317,7 +318,6 @@ class Fighter():
             # reset the animation index too:
             self.frame_index = 0
             self.update_time = pygame.time.get_ticks()
-    
 
     def parry(self): 
         # check if the character can parry: 
@@ -331,7 +331,6 @@ class Fighter():
                 2 * self.rect.width, # make parry rect pretty small to make it more skillful
                 self.rect.height
             )
-
 
     def attack(self): 
         # check if the character can attack: 
@@ -352,8 +351,7 @@ class Fighter():
                     3.25 * self.rect.width, 
                     0.25 * self.rect.height 
                 )
-    
-    
+      
     def process_joint_actions(self, target):
         # if self attacks: 
         if self.attacking == True:
@@ -382,13 +380,8 @@ class Fighter():
                     else: # self.attack_type == 2: 
                         self.health -= .20
                     self.hit = True
-            
-    
+               
     def draw(self, surface):
-        """_summary_
-        Args:
-            surface (_type_): Game window we are drawing the character/fighter onto. 
-        """
         img = pygame.transform.flip(self.image, self.flip, False)
         
         # uncomment to show rectangle character is drawn on top of: 

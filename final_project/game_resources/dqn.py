@@ -15,7 +15,7 @@ NUM_INPUTS, NUM_ACTIONS = 10, 16
 NUM_HIDDEN_NODES = 12
 
 class DeepQNN(nn.Module): 
-    """A 4-layer neural network for deep Q-learning."""
+    """ A 4-layer neural network for deep Q-learning. """
     def __init__(self):
         super().__init__()
         # create layers:
@@ -34,7 +34,7 @@ class DeepQNN(nn.Module):
         return out 
     
 class Buffer():
-    """ A buffer to store and sample episodes for NN training."""
+    """ A buffer to store and sample episodes for NN training. """
     def __init__(self, device="cpu"): 
         self.buffer = []
         self.device = device

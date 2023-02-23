@@ -18,7 +18,7 @@ medium.csv:
           for policy.
         - reward shaping: subtract distance from goal (assumed to be right-most position) 
                           from reward to encourage progression toward goal. 
-        - default st val: -500
+        - default st val: -300
         - eta: 0.05
         - train loops: 3
 
