@@ -9,8 +9,21 @@ hyperparameters as constants locations:
     - round win reward penalty/addendum in 'game.py''s step() function
 
 to-do's: 
-    1. in fighter.py: 
-        1.1. write get_state function 
-        1.2. write parse_keys_from_action_idx function
-    2. check to make sure demo.py works as intended 
-    3. begin filling out trainer.py's 'train' function! 
+    1. ✅ in fighter.py: 
+        1.1. ✅ write get_state function 
+        1.2. ✅ write parse_keys_from_action_idx function
+
+    from 02/23/23: 
+    1. ✅ solve environment (need pygame and pytorch)
+    2. ✅ check to make sure demo.py works as intended
+        2.1. in playtest, up action cooldown for AI agents if too fast.
+    3. write stable_softmax function in trainer.py 
+    4. fin. trainer.py's train function! 
+        4.1. write train_step function in trainer.py
+
+
+    long-term: 
+    0. train model! 
+    1. after model has been trained: 
+        1.1. re-visit demo & make sure loading loaded-params AI_TRAINER agent works!
+        1.2. run AI_TRAINER vs AI_RAND test!

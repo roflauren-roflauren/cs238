@@ -26,16 +26,18 @@ class Game():
         self.screen = pygame.display.set_mode(size=(self.SCREEN_WIDTH, self.SCREEN_HEIGHT))
         pygame.display.set_caption("MORTAL (Q)OMBAT")
         # background image: 
-        self.bg_image = pygame.image.load("./game_resources/visual_assets/oak_woods_background/collated_forest_bg.png").convert_alpha()
+        self.bg_image = pygame.image.load("../game_resources/visual_assets/oak_woods_background/collated_forest_bg.png").convert_alpha()
         # spritesheets: 
-        self.knight_sheet     = pygame.image.load("./game_resources/visual_assets/final_spritesheet.png").convert_alpha()
-        self.inv_knight_sheet = pygame.image.load("./game_resources/visual_assets/spritesheet_inverted.png").convert_alpha()
+        self.knight_sheet     = pygame.image.load("../game_resources/visual_assets/final_spritesheet.png").convert_alpha()
+        self.inv_knight_sheet = pygame.image.load("../game_resources/visual_assets/spritesheet_inverted.png").convert_alpha()
         # fonts: 
-        self.count_font = pygame.font.Font("./game_resources/fonts/turok.ttf", 80)
-        self.score_font = pygame.font.Font("./game_resources/fonts/turok.ttf", 30)
+        self.count_font = pygame.font.Font("../game_resources/fonts/turok.ttf", 80)
+        self.score_font = pygame.font.Font("../game_resources/fonts/turok.ttf", 30)
         # fighter variables: 
         self.fighter_1 = Fighter(1, self.fighter_1_type, 200, 264, False, self.knight_sheet)
         self.fighter_2 = Fighter(2, self.fighter_2_type, 700, 264, True,  self.inv_knight_sheet)
+        # fighter scores:
+        self.score = [0, 0] # [P1, P2]
     
     def __del__(self): 
         """ Destructor for game environment. """
@@ -103,22 +105,25 @@ class Game():
         self.fighter_1.update(), self.fighter_2.update()
         # draw fighters:
         self.fighter_1.draw(self.screen), self.fighter_2.draw(self.screen)
-
-        # update display with all changes: 
-        pygame.display.update()
-        
+    
         # if the round is over (i.e., one of the fighters is dead):
-        if self.fighter_1.alive == False or self.fighter_2 == False: 
-            f1_terminal, f2_terminal = True, True 
+        if self.fighter_1.alive == False or self.fighter_2.alive == False: 
+            f1_terminal, f2_terminal = 1, 1 
             f1_reward = 10000 if self.fighter_1.alive == True else -10000
-            f2_reward = 10000 if self.fighter_2.alive == True else -10000     
+            f2_reward = 10000 if self.fighter_2.alive == True else -10000    
+            # display round_over message:
+            self.draw_text("ROUND OVER...RESETTING", self.score_font, self.COLORS["RED"], 350,  100)
         else: 
-            f1_terminal, f2_terminal = False, False 
+            f1_terminal, f2_terminal = 0, 0 
             f1_reward = self.fighter_1.health - self.fighter_2.health
             f2_reward = self.fighter_2.health - self.fighter_1.health
         # retrieve the (current) next state for each fighter: 
         f1_next_state = self.fighter_1.get_state(self.fighter_2)
         f2_next_state = self.fighter_2.get_state(self.fighter_1) 
-                
+        
+        # update display with all changes: 
+        pygame.display.update()
+        
+        # return (sp, r, t) info for both fighters:
         return [(f1_next_state, f1_reward, f1_terminal), 
                 (f2_next_state, f2_reward, f2_terminal)]

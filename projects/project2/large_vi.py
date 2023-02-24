@@ -4,8 +4,6 @@ import numpy as np
 import pandas as pd 
 import random as rd 
 
-import pprint
-
 ## environment specs: 
 # number of states: 
 NUM_STATES = 312020
@@ -23,7 +21,6 @@ MAX_ITERS = 1000000
 ## other constants:
 # random seed: 
 rd.seed(238)
-
 
 def normalize(d, target=1.0):
    raw = sum(d.values())
@@ -54,9 +51,8 @@ def main():
     # init. state values: 
     state_vals = np.full(shape=(NUM_STATES, 1), fill_value=st_val_dft)
     
-    vi_start_time = time.time()
-    
     # conduct asynchronous value iteration: 
+    vi_start_time = time.time()
     for idx in range(MAX_ITERS): 
         if idx % 10000 == 0: print("Working on iteration {idx}".format(idx=idx))
         
@@ -67,29 +63,24 @@ def main():
             action_value = 0
             
             for state_chg in action_prob_dict[a].keys(): 
-                
                 r = 0
                 sp = min(state_to_update + state_chg, 0)
-                
                 if sp == 151211 and state_to_update != 151211:
                     r = 100 
                 elif sp == 151312 and state_to_update != 151312:
                     r = 100 
-                
                 action_value += lmb * state_vals[sp] * action_prob_dict[a][state_chg]
                 action_value += r 
-                
+    
             action_values.append(action_value)
-            
+
         state_vals[state_to_update] = max(action_values)
     
     print("Asynch VI took: --- %s seconds ---" 
         % round((time.time() - vi_start_time), 3))
     
-    
-    pe_start_time = time.time()
-    
     # extract policy:
+    pe_start_time = time.time()
     with open('./policy_files/large_vi.policy', 'w') as f: 
         # iterate through states: 
         for i in range(NUM_STATES): 
@@ -102,20 +93,16 @@ def main():
                 action_value = 0
                 
                 for state_chg in action_prob_dict[a].keys(): 
-                    
                     r = 0
                     sp = min(state_to_update + state_chg, 0)
-                    
                     if sp == 151211 and state_to_update != 151211:
                         r = 100 
                     elif sp == 151312 and state_to_update != 151312:
                         r = 100 
-                    
                     action_value += lmb * state_vals[sp] * action_prob_dict[a][state_chg]
                     action_value += r 
-                    
+
                 action_values.append(action_value)
-                
                 opt_val = max(action_values)
                 action_idx = action_values.index(opt_val) + 1
             
@@ -123,12 +110,10 @@ def main():
     
     print("PE took: --- %s seconds ---" 
         % round((time.time() - pe_start_time), 3))
-    
     print("Overall program took: --- %s seconds ---" 
         % round((time.time() - program_start_time), 3))
-    
-    return 0
 
+    return 0
 
 if __name__ == "__main__":
     main()

@@ -34,15 +34,15 @@ screen = pygame.display.set_mode(size=(SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_caption("MORTAL (Q)OMBAT")
 
 # load background image:
-bg_image = pygame.image.load("./game_resources/visual_assets/oak_woods_background/collated_forest_bg.png").convert_alpha()
+bg_image = pygame.image.load("../game_resources/visual_assets/oak_woods_background/collated_forest_bg.png").convert_alpha()
 
 # load spritesheets: 
-knight_sheet = pygame.image.load("./game_resources/visual_assets/final_spritesheet.png").convert_alpha()
-inverted_knight_sheet = pygame.image.load("./game_resources/visual_assets/spritesheet_inverted.png").convert_alpha()
+knight_sheet = pygame.image.load("../game_resources/visual_assets/final_spritesheet.png").convert_alpha()
+inverted_knight_sheet = pygame.image.load("../game_resources/visual_assets/spritesheet_inverted.png").convert_alpha()
 
 # define fonts: 
-count_font = pygame.font.Font("./game_resources/fonts/turok.ttf", 80)
-score_font = pygame.font.Font("./game_resources/fonts/turok.ttf", 30)
+count_font = pygame.font.Font("../game_resources/fonts/turok.ttf", 80)
+score_font = pygame.font.Font("../game_resources/fonts/turok.ttf", 30)
 
 # function for drawing text on the game screen: 
 def draw_text(text, font, text_col, x, y):

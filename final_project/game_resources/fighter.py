@@ -116,11 +116,40 @@ class Fighter():
         return animation_list
     
     def get_state(self, target):
-        # TODO: WRITE ME! 
-        # Will return a state representation for the current fighter as a...numpy array? Torch tensor? idk yet
-            
+        # init. state container: 
+        state = []
+        # state consists of: 
+        state += [self.rect.centerx, target.rect.centerx]       # x-coord of self and target.
+        state += [self.rect.centery, target.rect.centery]       # y-coord of self and target.
+        state += [abs(self.rect.centerx - target.rect.centerx), 
+                  abs(self.rect.centery - target.rect.centery)] # abs. diff in x, y-coords. 
+        state += [self.health, target.health]                   # health of self and target. 
+        state += [self.action, target.action]                   # *current* action ID of self and target. 
+        # return state representation for self Fighter as numpy array. 
+        return np.array(state)
+        
     def parse_keys_from_action_idx(self, action_idx : int): 
-        # TODO: WRITE MEEEE!!!
+        # 4 possible actions for movement, 4 possible actions for attack/parry.
+        # -1, 0, 1, 2 for both types of action. -1 corresponds to doing nothing.  
+        action_matrix = np.zeros(shape=(4,4))
+        # de-couple movement and weapon inputs from action_idx: 
+        sub_action_idxs = np.ravel_multi_index([action_idx], action_matrix.shape)
+        # convert movement and weapon inputs to scalars: 
+        movement_input, weapon_input = int(sub_action_idxs[0].item(0)) - 1, int(sub_action_idxs[1].item(0)) - 1
+        
+        # use movement and weapon inputs to gen. corresponding pygame ScancodeWrapper() obj:
+        # keypress ret. object starts with 'False' for every input since agent is AI. 
+        l_key = list(pygame.key.get_pressed())
+        # map ints to keypresses and update 'key' (i.e., keypress dictionary):
+        if movement_input != -1: 
+            movement_key = self.keypress_idxs["movement"][movement_input][self.player - 1]
+            l_key[movement_key] = True
+        if weapon_input != -1: 
+            weapon_key = self.keypress_idxs["weapon"][weapon_input][self.player - 1]
+            l_key[weapon_key] = True
+        
+        # convert and return the keypress bool list back to pygame's ScancodeWrapper type:
+        return pygame.key.ScancodeWrapper(l_key)
     
     def gen_random_move(self): 
         # list with bool for keypresses; will be 'False' for every keyboard input since agent is AI:
