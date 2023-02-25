@@ -29,7 +29,7 @@ class Fighter():
         self.player_type = player_type
         # key press idxs for random AI input generation: 
         self.keypress_idxs = {
-            "movement" : [(4, 80), (7, 79), (20, 82)],    # pygame.key.get_pressed() ScancodeWrapper()'s idxs for: [(a, l_arrow), (d, r_arrow), (w, up_arrow)]
+            "movement" : [(4,  80), (7,  79), (20, 82)],  # pygame.key.get_pressed() ScancodeWrapper()'s idxs for: [(a, l_arrow), (d, r_arrow), (w, up_arrow)]
             "weapon"   : [(13, 89), (14, 90), (15, 91)]   #                                                        [(j, KP1),     (k, KP2),     (l, KP3)     ]                                 
         }
         
@@ -69,6 +69,9 @@ class Fighter():
         
         # track whether character is jumping or not: 
         self.jump = False
+        
+        # cooldown on jumping (makes AI jump less): 
+        self.jump_cooldown = 0
         
         # track whether character is attacking or not: 
         self.attacking = False
@@ -126,14 +129,14 @@ class Fighter():
         state += [self.health, target.health]                   # health of self and target. 
         state += [self.action, target.action]                   # *current* action ID of self and target. 
         # return state representation for self Fighter as numpy array. 
-        return np.array(state)
+        return np.array(state, dtype="float32")
         
     def parse_keys_from_action_idx(self, action_idx : int): 
         # 4 possible actions for movement, 4 possible actions for attack/parry.
         # -1, 0, 1, 2 for both types of action. -1 corresponds to doing nothing.  
         action_matrix = np.zeros(shape=(4,4))
         # de-couple movement and weapon inputs from action_idx: 
-        sub_action_idxs = np.ravel_multi_index([action_idx], action_matrix.shape)
+        sub_action_idxs = np.unravel_index(action_idx, action_matrix.shape)
         # convert movement and weapon inputs to scalars: 
         movement_input, weapon_input = int(sub_action_idxs[0].item(0)) - 1, int(sub_action_idxs[1].item(0)) - 1
         
@@ -207,9 +210,11 @@ class Fighter():
                 if key[pygame.K_d]: # right 
                     dx = SPEED 
                     self.running = True
-                if key[pygame.K_w] and self.jump == False : # jump, 2nd cond. ensures no double-jump allowed! 
-                    self.vel_y = -35
-                    self.jump = True
+                if key[pygame.K_w] and self.jump == False: # jump, 2nd cond. ensures no double-jump allowed! 
+                    if self.jump_cooldown == 0:
+                        self.vel_y = -35
+                        self.jump = True
+                        self.jump_cooldown = 40 if self.player_type == "HUMAN" else 120
                     
                 if key[pygame.K_j] or key[pygame.K_k]: 
                     # determine attack type: 
@@ -234,8 +239,10 @@ class Fighter():
                     dx = SPEED 
                     self.running = True
                 if key[pygame.K_UP] and self.jump == False : # jump, 2nd cond. ensures no double-jump allowed! 
-                    self.vel_y = -35
-                    self.jump = True
+                    if self.jump_cooldown == 0:
+                        self.vel_y = -35
+                        self.jump = True
+                        self.jump_cooldown = 40 if self.player_type == "HUMAN" else 120
                     
                 if key[pygame.K_KP1] or key[pygame.K_KP2]: 
                     # determine attack type: 
@@ -268,7 +275,11 @@ class Fighter():
             self.flip = False
         else: 
             self.flip = True
-            
+        
+        # apply jump cooldown: 
+        if self.jump_cooldown > 0: 
+            self.jump_cooldown -= 1
+        
         # apply attack cooldown: 
         if self.attack_cooldown > 0: 
             self.attack_cooldown -= 1
@@ -325,19 +336,19 @@ class Fighter():
                 # check if an attack was executed: 
                 if self.action == 3 or self.action == 4: 
                     self.attacking = False
-                    self.attack_cooldown = 40
+                    self.attack_cooldown = 40 if self.player_type == "HUMAN" else 120
                     self.attacking_rect = pygame.Rect(0,0,0,0)
                 # check if attack was received: 
                 if self.action == 5: 
                     self.hit = False
                     # if the player was in the middle of an attack, then their attack is cancelled: 
                     self.attacking = False 
-                    self.attack_cooldown = 40 
+                    self.attack_cooldown = 40 if self.player_type == "HUMAN" else 120
                     self.attacking_rect = pygame.Rect(0,0,0,0)
                 # check if parry was executed:
                 if self.action == 7: 
                     self.parrying = False
-                    self.parry_cooldown = 40
+                    self.parry_cooldown = 40 if self.player_type == "HUMAN" else 120
                     self.parrying_rect = pygame.Rect(0,0,0,0)
            
     def update_action(self, new_action): 
@@ -386,7 +397,7 @@ class Fighter():
         if self.attacking == True:
             # if target successfully parries: 
             if target.parrying == True and self.attacking_rect.colliderect(target.parrying_rect): 
-                self.action_cooldown = 150
+                self.action_cooldown = 100 if self.player_type == "HUMAN" else 300
             # else (if) target either did not parry, or they did but unsuccessfully: 
             else:
                 if self.attacking_rect.colliderect(target.rect):
@@ -400,7 +411,7 @@ class Fighter():
         if target.attacking == True: 
             # if self successfully parries: 
             if self.parrying == True and self.parrying_rect.colliderect(target.attacking_rect): 
-                target.action_cooldown = 150
+                target.action_cooldown = 100 if self.player_type == "HUMAN" else 300
             # else (if) self either did not parry, or they did but unsuccessfully: 
             else:
                 if target.attacking_rect.colliderect(self.rect):

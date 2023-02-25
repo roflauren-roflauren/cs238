@@ -35,9 +35,10 @@ class DeepQNN(nn.Module):
     
 class Buffer():
     """ A buffer to store and sample episodes for NN training. """
-    def __init__(self, device="cpu"): 
+    def __init__(self, device="cpu", seed = 238): 
         self.buffer = []
         self.device = device
+        self.seed = seed
     
     def __len__(self): 
         return len(self.buffer)
@@ -51,14 +52,18 @@ class Buffer():
     def sample(self, batch_size): 
         # prepare containers for sampled (s, a, r, sp, t) values:
         s, a, r, sp, t = [], [], [], [], []
-        # generate indices to sample:sta
+        # set random seed to ensure replicability of sampling and training: 
+        rd.seed(self.seed)
+        # generate indices to sample:
         sample_idxs = np.random.choice(len(self.buffer), batch_size)
         # populate s, a, r, sp, t containers with sampled values: 
         for idx in sample_idxs: 
             si, ai, ri, spi, ti = self.buffer[idx]
-            s.append(si), a.append(ai), r.append(ri), sp.append(spi), t.append(ti)
+            s.append( np.array(si,  copy = False)), a.append( np.array(ai,  copy = False)), r.append( np.array(ri,  copy = False)), \
+                sp.append(np.array(spi, copy = False)),  t.append( np.array(ti,  copy = False))
         # convert sampled lists to tensors: 
-        s, a, r, sp, t = torch.Tensor(s, device=self.device), torch.Tensor(a, device=self.device), \
-            torch.Tensor(r, device=self.device), torch.Tensor(sp, device=self.device), torch.Tensor(t, device=self.device)  
+        s, a, r, sp, t = torch.tensor(np.array(s, dtype=np.float32), device=self.device), \
+            torch.tensor(np.array(a, dtype='int64'), device=self.device), torch.tensor(np.array(r, dtype=np.float32), device=self.device), \
+                torch.tensor(np.array(sp), device=self.device), torch.tensor(np.array(t, dtype=np.float32), device=self.device)  
         # return the sampled episode information: 
         return s, a, r, sp, t

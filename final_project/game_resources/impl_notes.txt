@@ -4,9 +4,16 @@ gameplay elements:
     2. maybe change the parry rect width to make parrying a little less difficult? right now it's set at 2 * self.rect.width which is pretty okay
     3. maybe increase attack, parry, action cooldown if gameplay agent is AI?
 
-hyperparameters as constants locations: 
+hyperparameters as not-function-parameter locations: 
     - 'NUM_HIDDEN_NODES' in 'dqn.py'
     - round win reward penalty/addendum in 'game.py''s step() function
+    - concurrent location reward penalty in same location as ^above^
+    - constant penalty reward shaping (self.health - target.health - 100) to encourage combat (same location as ^above^)
+    - fighter ideal distance reward shaping to encourage combat (same location as ^above^)
+
+other important hyperparameters: 
+    - game_max_frames:
+        - if game exceeds this number of frames, it's like a tie - add. penalty for not winning in fixed time period. game resets.
 
 to-do's: 
     1. ✅ in fighter.py: 
@@ -16,14 +23,22 @@ to-do's:
     from 02/23/23: 
     1. ✅ solve environment (need pygame and pytorch)
     2. ✅ check to make sure demo.py works as intended
-        2.1. in playtest, up action cooldown for AI agents if too fast.
-    3. write stable_softmax function in trainer.py 
-    4. fin. trainer.py's train function! 
-        4.1. write train_step function in trainer.py
-
+        2.1. ✅ in playtest, up action cooldown for AI agents if too fast. 
+               - 02/24 note: AI_RANDOM/AI_TRAINER cooldown for something = HUMAN cooldown * 3
+    3. ✅ write stable_softmax function in trainer.py 
+    4. ✅ fin. trainer.py's train function! 
+        4.1. ✅ write train_step function in trainer.py
 
     long-term: 
-    0. train model! 
-    1. after model has been trained: 
+    0. prelim. train model! 
+        0.1. do prelim. train with few training episodes, just to make sure everything is working. 
+        0.2. if prelim. train works, update train() to write loss & avg. reward to files for viz. 
+    1. train model verbose! 
+        * make sure loss + reward writing funcs. work before letting trainer run on big train.
+    2. after model has been trained: 
         1.1. re-visit demo & make sure loading loaded-params AI_TRAINER agent works!
         1.2. run AI_TRAINER vs AI_RAND test!
+
+general notes: 
+    - softmax_precision parameter currently *UNUSED* in main.py, trainer.py's train, stable_softmax functions.
+    

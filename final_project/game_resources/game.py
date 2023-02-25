@@ -4,7 +4,7 @@ from fighter import Fighter
 
 class Game(): 
     """ This class represents the brawler game environment. """
-    def __init__(self, fighter_1_type: str, fighter_2_type : str):
+    def __init__(self, fighter_1_type: str, fighter_2_type : str, game_max_frames : int):
         """ Constructor for game environment. """
         super().__init__()
         # verify goodness of fighter types: 
@@ -38,12 +38,11 @@ class Game():
         self.fighter_2 = Fighter(2, self.fighter_2_type, 700, 264, True,  self.inv_knight_sheet)
         # fighter scores:
         self.score = [0, 0] # [P1, P2]
+        # internal game frame counter: 
+        self.frame = 0
+        # max frame constant: 
+        self.max_frames = game_max_frames
     
-    def __del__(self): 
-        """ Destructor for game environment. """
-        # exit pygame: 
-        pygame.quit()
-        
     def reset_fighters(self): 
         """ Reset the fighters for another round. """
         # reset the fighters (by re-instantiating them):
@@ -106,17 +105,40 @@ class Game():
         # draw fighters:
         self.fighter_1.draw(self.screen), self.fighter_2.draw(self.screen)
     
+        # increment the game frame:
+        self.frame += 1
+    
         # if the round is over (i.e., one of the fighters is dead):
         if self.fighter_1.alive == False or self.fighter_2.alive == False: 
             f1_terminal, f2_terminal = 1, 1 
             f1_reward = 10000 if self.fighter_1.alive == True else -10000
             f2_reward = 10000 if self.fighter_2.alive == True else -10000    
             # display round_over message:
-            self.draw_text("ROUND OVER...RESETTING", self.score_font, self.COLORS["RED"], 350,  100)
+            self.draw_text("ROUND OVER...RESETTING", self.score_font, self.COLORS["RED"], 350,  100)     
+        # round is ongoing and no one has died: 
         else: 
             f1_terminal, f2_terminal = 0, 0 
-            f1_reward = self.fighter_1.health - self.fighter_2.health
-            f2_reward = self.fighter_2.health - self.fighter_1.health
+            f1_reward = self.fighter_1.health - self.fighter_2.health - 100 # small penalty for non-combat.
+            f2_reward = self.fighter_2.health - self.fighter_1.health - 100
+            
+            # reward fighter convergence to make combat more likely: 
+            dist_reward = max(100 - abs(self.fighter_1.rect.centerx - self.fighter_2.rect.centerx) - self.fighter_1.rect.width, 0)
+            f1_reward += dist_reward
+            f2_reward += dist_reward
+            
+            # penalize concurrent positions of the fighters which makes combat unlikely: 
+            if self.fighter_1.rect.centerx == self.fighter_2.rect.centerx: 
+                f1_reward -= 100
+                f2_reward -= 100
+                
+            # if the maximum number of frames for a game is exceeded: 
+            if self.frame >= self.max_frames:
+                print("No one won! Bad AI!") # TODO: DELETE ME!
+                # penalize both fighters for tieing - I want you to fight! 
+                f1_terminal, f2_terminal = 1, 1
+                f1_reward -= 5000
+                f2_reward -= 5000 
+            
         # retrieve the (current) next state for each fighter: 
         f1_next_state = self.fighter_1.get_state(self.fighter_2)
         f2_next_state = self.fighter_2.get_state(self.fighter_1) 
