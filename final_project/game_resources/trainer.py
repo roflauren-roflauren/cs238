@@ -15,6 +15,7 @@ from   game import Game
 class Trainer():
     """ A class for training the gameplay agent. """
     def __init__(self, 
+        num_hidden_nodes : tuple = (34, 26),
         device : str = 'cpu', 
         seed : int  = 238, 
         load_prev_params : bool = False, 
@@ -27,8 +28,8 @@ class Trainer():
         # register the device to be used for training: 
         self.device = device 
         # initialize the training and target NN on the desired device: 
-        self.train_nn  = dqn.DeepQNN().to(self.device)
-        self.target_nn = dqn.DeepQNN().to(self.device)
+        self.train_nn  = dqn.DeepQNN(num_hidden_nodes[0], num_hidden_nodes[1]).to(self.device)
+        self.target_nn = dqn.DeepQNN(num_hidden_nodes[0], num_hidden_nodes[1]).to(self.device)
         # check if there are any parameter files to initialize our models from:
         if load_prev_params == True: 
             if params_path is None: 
@@ -39,6 +40,7 @@ class Trainer():
         # initialize a experience replay buffer: 
         self.replay_buffer = dqn.Buffer(device = self.device, seed = self.seed)
     
+    ## NOTE: stable_softmax() CURRENTLY NOT IN USE.
     def stable_softmax(self, q_vals, softmax_precision):
         """ A utility function which performs the stable softmax operation and samples an index from the resulting probability vector."""
         # apply the stable softmax to convert Q-values to probs.:
@@ -53,6 +55,16 @@ class Trainer():
         # enforce random seed to ensure replicability across training trials: 
         rd.seed(self.seed)
         return np.random.choice(len(probs), p=probs) 
+    
+    ## NOTE: epsilon_greedy() CURRENTLY IN USE.
+    def epsilon_greedy(self, q_vals, epsilon): 
+        action_idx = 0
+        prob = np.random.uniform()
+        if prob < epsilon: 
+            action_idx = np.random.choice(len(q_vals))
+        else:
+            action_idx = np.argmax(q_vals)
+        return action_idx
     
     def q_update(self, s, a, r, sp, t, discount_factor): 
         # compute the Q-values for each action, for each episode: 
@@ -79,13 +91,16 @@ class Trainer():
         num_train_games = int(1e6),
         game_max_frames = 10000,
         discount_factor = 0.95,
-        softmax_precision = 1e-4, 
-        softmax_precision_multiplier = 1.1, 
+        epsilon = 1.0,
         replay_batch_size = 64,
         num_episodes_per_rp   = 5000,
         num_episodes_per_copy = 20000, 
         num_episodes_per_save = 50000,
-        model_params_save_dir = "./model_params/"
+        model_params_save_dir = "./model_params/", 
+        reward_save_file = "./reward.txt",
+        loss_save_file   = "./loss.txt",
+        save_file_start_game_num : int = None, 
+        save_file_start_ep_count : int = None
     ):
         """ This function actually performs the NN training. """ 
         # initialize the optimizer: 
@@ -102,13 +117,13 @@ class Trainer():
         # track total training time and total episode count: 
         train_time_start, episode_count = time.time(), 0
         
-        # extract the softmax_precision parameter into a local var. for updates: 
-        smp = softmax_precision
+        # extract the epsilon parameter into a local var. for updates: 
+        e = epsilon
         
         # for each training game: 
-        for idx in range(num_train_games): 
+        for game_idx in range(num_train_games): 
             # report which training game this is: 
-            print("Training with game number {game_num}".format(game_num = idx))
+            print("Training with game number {game_num}".format(game_num = game_idx))
             
             # (re-)instantiate the game environment:
             training_game = Game("AI_TRAINER", "AI_TRAINER", game_max_frames = game_max_frames) 
@@ -141,8 +156,8 @@ class Trainer():
                 
                 # apply the stable softmax to generate an action for each fighter: 
                 f1_action_idx, f2_action_idx = \
-                    self.stable_softmax(q_vals = f1_qs.cpu().data.numpy(), softmax_precision = smp), \
-                    self.stable_softmax(q_vals = f2_qs.cpu().data.numpy(), softmax_precision = smp) 
+                    self.epsilon_greedy(q_vals = f1_qs.cpu().data.numpy(), epsilon = e), \
+                    self.epsilon_greedy(q_vals = f2_qs.cpu().data.numpy(), epsilon = e) 
                 
                 ## REWARDS, NEXT STATE, GAME_TERMINATED: 
                 # step the game environment using the sample actions: 
@@ -167,14 +182,14 @@ class Trainer():
                 ## TRAINING BOOKKEEPING:
                 # increment the training episodes count by 2 (one for each agent): 
                 episode_count += 2
-                # increase the softmax precision parameter by a multiplicative factor to slowly discourage exploration: 
-                smp *= softmax_precision_multiplier
-            
+                
                 ## CHECK IF WE NEED TO...
                 # copy the training weights over to the target network: 
                 if episode_count % num_episodes_per_copy == 0: 
-                    print("COPYING WEIGHTS FROM TRAIN NN TO TARGET NN...") # TODO: DELETE ME! 
+                    # info message:
+                    print("COPYING WEIGHTS FROM TRAIN NN TO TARGET NN...") 
                     self.target_nn.load_state_dict(self.train_nn.state_dict())
+                    
                 # report the latest average episodes reward and loss: 
                 if episode_count % num_episodes_per_rp == 0: 
                     print("Average reward in last {num_episodes_per_rp} episodes for fighters 1, 2: {f1_avg}, {f2_avg}".format(
@@ -183,16 +198,37 @@ class Trainer():
                     print("Average loss in last {num_episodes_per_rp} episodes: {avg_loss}".format(
                         num_episodes_per_rp = num_episodes_per_rp, avg_loss = np.mean(loss_log)
                     ))
-                    # if yes, don't forget to clear the reward and loss logs:
+                    # write these figures to file: 
+                    with open(reward_save_file, 'a+') as f: 
+                        for line in f:
+                            if line.isspace(): break
+                        f.write(str(np.mean(f1_rewards)) + '\n')
+                        f.write(str(np.mean(f2_rewards)) + '\n')
+                            
+                        
+                    with open(loss_save_file, 'a+') as f: 
+                        for line in f:
+                            if line.isspace(): break
+                        f.write(str(np.mean(loss_log)) + '\n')
+                                
+                    # if here, don't forget to clear the reward and loss logs:
                     f1_rewards, f2_rewards, loss_log = [], [], []
+                    
                 # save the model parameters (just in case of a catastropic failure): 
                 if episode_count % num_episodes_per_save == 0: 
-                    print("SAVING MODEL PARAMETERS...") # TODO: DELETE ME! 
+                    # add the prior game count if we're continuing training from a prior session: 
+                    game_count = game_idx + save_file_start_game_num \
+                        if save_file_start_game_num is not None else game_idx
+                    # add the prior episode count if we're continuing training from a prior session: 
+                    episode_count = episode_count + save_file_start_ep_count \
+                        if save_file_start_ep_count is not None else episode_count
+                    # info message:
+                    print("SAVING MODEL PARAMETERS...")
                     torch.save(self.train_nn.state_dict(),  
-                               model_params_save_dir + "train_nn"  + "_" + str(episode_count) + ".params")
+                               model_params_save_dir + "train_nn"  + "_" + str(game_count) + "_" + str(episode_count) + ".params")
                     torch.save(self.target_nn.state_dict(), 
-                               model_params_save_dir + "target_nn" + "_" + str(episode_count) + ".params")
-
+                               model_params_save_dir + "target_nn" + "_" + str(game_count) + "_" + str(episode_count) + ".params")
+                    
                 ## NEURAL NETWORK TRAINING:
                 # if there are sufficient episodes in the replay buffer:
                 if len(self.replay_buffer) > replay_batch_size: 
@@ -202,6 +238,9 @@ class Trainer():
                     loss = self.q_update(s, a, r, sp, t, discount_factor)
                     # log loss: 
                     loss_log.append(loss.cpu().data.numpy())
+              
+            # decay epsilon for next game if above some threshold: 
+            if e > 0.005: e -= 0.001
                 
         # quit pygame once all training games are done: 
         pg.quit()

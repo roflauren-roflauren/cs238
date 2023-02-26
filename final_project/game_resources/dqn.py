@@ -8,20 +8,17 @@ import torch.nn.functional as F
 
 ## constants: 
 # dimensionality of input, output: 
-NUM_INPUTS, NUM_ACTIONS = 10, 16
+NUM_INPUTS, NUM_ACTIONS = 42, 16
 
-## hyperparameters: 
-# number of nodes in hidden layer: 
-NUM_HIDDEN_NODES = 12
 
 class DeepQNN(nn.Module): 
     """ A 4-layer neural network for deep Q-learning. """
-    def __init__(self):
+    def __init__(self, num_hn_layer1, num_hn_layer2):
         super().__init__()
         # create layers:
-        self.ll1 = nn.Linear(NUM_INPUTS, NUM_HIDDEN_NODES)
-        self.ll2 = nn.Linear(NUM_HIDDEN_NODES, NUM_HIDDEN_NODES)
-        self.ll3 = nn.Linear(NUM_HIDDEN_NODES, NUM_ACTIONS)
+        self.ll1 = nn.Linear(NUM_INPUTS   , num_hn_layer1)
+        self.ll2 = nn.Linear(num_hn_layer1, num_hn_layer2)
+        self.ll3 = nn.Linear(num_hn_layer2, NUM_ACTIONS  )
         # initialize layers:
         nn.init.xavier_uniform_(self.ll1.weight)
         nn.init.xavier_uniform_(self.ll2.weight)

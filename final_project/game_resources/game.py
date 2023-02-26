@@ -118,27 +118,31 @@ class Game():
         # round is ongoing and no one has died: 
         else: 
             f1_terminal, f2_terminal = 0, 0 
-            f1_reward = self.fighter_1.health - self.fighter_2.health - 100 # small penalty for non-combat.
-            f2_reward = self.fighter_2.health - self.fighter_1.health - 100
-            
-            # reward fighter convergence to make combat more likely: 
-            dist_reward = max(100 - abs(self.fighter_1.rect.centerx - self.fighter_2.rect.centerx) - self.fighter_1.rect.width, 0)
-            f1_reward += dist_reward
-            f2_reward += dist_reward
-            
-            # penalize concurrent positions of the fighters which makes combat unlikely: 
-            if self.fighter_1.rect.centerx == self.fighter_2.rect.centerx: 
-                f1_reward -= 100
-                f2_reward -= 100
-                
-            # if the maximum number of frames for a game is exceeded: 
+            f1_reward = self.fighter_1.health - self.fighter_2.health
+            f2_reward = self.fighter_2.health - self.fighter_1.health
+            # if the maximum number of frames for a game is exceeded, it's a tie: 
             if self.frame >= self.max_frames:
-                print("No one won! Bad AI!") # TODO: DELETE ME!
-                # penalize both fighters for tieing - I want you to fight! 
+                # info message:
+                print("NO WINNER. PENALIZING BOTH FIGHTERS...")
+                # penalize both fighters for tying to encourage combat
                 f1_terminal, f2_terminal = 1, 1
                 f1_reward -= 5000
                 f2_reward -= 5000 
-            
+            # if the game is going to continue:
+            else: 
+                # reward fighter convergence which makes combat more likely: 
+                dist_reward = max(
+                    100 - abs(self.fighter_1.rect.centerx - self.fighter_2.rect.centerx), 
+                    0, 
+                )
+                f1_reward += dist_reward
+                f2_reward += dist_reward
+                
+                # penalize concurrent positions of the fighters which makes combat unlikely: 
+                if self.fighter_1.rect.centerx == self.fighter_2.rect.centerx: 
+                    f1_reward -= 100
+                    f2_reward -= 100
+                
         # retrieve the (current) next state for each fighter: 
         f1_next_state = self.fighter_1.get_state(self.fighter_2)
         f2_next_state = self.fighter_2.get_state(self.fighter_1) 

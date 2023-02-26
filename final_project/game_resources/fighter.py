@@ -18,6 +18,8 @@ KNIGHT_DATA = [KNIGHT_SIZE, KNIGHT_SCALE, KNIGHT_OFFSET]
 ## number of steps/frames in each action animation: 
 # idle, run, jump, attack1, attack2, receive hit, die, parry
 KNIGHT_ANIMATION_STEPS = [8, 8, 2, 4, 4, 4, 6, 3] 
+# number of possible actions:
+NUM_ACTIONS = 8
 
 class Fighter():
     """ This class represents a game character and their attributes and dynamics."""
@@ -121,13 +123,28 @@ class Fighter():
     def get_state(self, target):
         # init. state container: 
         state = []
+        
         # state consists of: 
         state += [self.rect.centerx, target.rect.centerx]       # x-coord of self and target.
         state += [self.rect.centery, target.rect.centery]       # y-coord of self and target.
         state += [abs(self.rect.centerx - target.rect.centerx), 
                   abs(self.rect.centery - target.rect.centery)] # abs. diff in x, y-coords. 
         state += [self.health, target.health]                   # health of self and target. 
-        state += [self.action, target.action]                   # *current* action ID of self and target. 
+        # *current* action IDs of self and target as one-hot vectors. 
+        self_action_onehot = [0] * (self.action   - 0) + [1] + [0] * (NUM_ACTIONS - self.action   - 1)     
+        targ_action_onehot = [0] * (target.action - 0) + [1] + [0] * (NUM_ACTIONS - target.action - 1)       
+        state += self_action_onehot + targ_action_onehot
+        # self and target cooldowns on various actions: 
+        state += [self.action_cooldown,   self.jump_cooldown,   self.attack_cooldown,   self.parry_cooldown  ]
+        state += [target.action_cooldown, target.jump_cooldown, target.attack_cooldown, target.parry_cooldown]
+        # hit condition of self and target:
+        state += [1 if self.hit   == True else 0]
+        state += [1 if target.hit == True else 0]      
+        # other conditions of self and target (running, jump, attacking, parrying): 
+        self_condition_onehots = [1 if self.running   else 0] + [1 if self.jump   else 0] + [1 if self.attacking   else 0] + [1 if self.parrying   else 0]
+        targ_condition_onehots = [1 if target.running else 0] + [1 if target.jump else 0] + [1 if target.attacking else 0] + [1 if target.parrying else 0]
+        state += self_condition_onehots + targ_condition_onehots
+        
         # return state representation for self Fighter as numpy array. 
         return np.array(state, dtype="float32")
         

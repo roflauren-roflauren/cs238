@@ -5,12 +5,12 @@ gameplay elements:
     3. maybe increase attack, parry, action cooldown if gameplay agent is AI?
 
 hyperparameters as not-function-parameter locations: 
-    - 'NUM_HIDDEN_NODES' in 'dqn.py'
-    - round win reward penalty/addendum in 'game.py''s step() function
-    - concurrent location reward penalty in same location as ^above^
-    - constant penalty reward shaping (self.health - target.health - 100) to encourage combat (same location as ^above^)
+    - round win/loss/tie reward in 'game.py''s step() function
+    - concurrent location reward penalty in same location as ^above^ (to encourage combat)
     - fighter ideal distance reward shaping to encourage combat (same location as ^above^)
-
+    * REMOVED AS OF 02/23/25:
+        - constant penalty reward shaping (self.health - target.health - 100) to encourage combat (same location as ^above^)
+        
 other important hyperparameters: 
     - game_max_frames:
         - if game exceeds this number of frames, it's like a tie - add. penalty for not winning in fixed time period. game resets.
@@ -25,7 +25,8 @@ to-do's:
     2. ✅ check to make sure demo.py works as intended
         2.1. ✅ in playtest, up action cooldown for AI agents if too fast. 
                - 02/24 note: AI_RANDOM/AI_TRAINER cooldown for something = HUMAN cooldown * 3
-    3. ✅ write stable_softmax function in trainer.py 
+    3. ✅ write stable_softmax & epsilon greedy functions in trainer.py 
+        - note from 02/25: currently, epsilon greedy is used. 
     4. ✅ fin. trainer.py's train function! 
         4.1. ✅ write train_step function in trainer.py
 
@@ -38,7 +39,3 @@ to-do's:
     2. after model has been trained: 
         1.1. re-visit demo & make sure loading loaded-params AI_TRAINER agent works!
         1.2. run AI_TRAINER vs AI_RAND test!
-
-general notes: 
-    - softmax_precision parameter currently *UNUSED* in main.py, trainer.py's train, stable_softmax functions.
-    
