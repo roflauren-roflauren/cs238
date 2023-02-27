@@ -31,7 +31,7 @@ class Fighter():
         self.player_type = player_type
         # key press idxs for random AI input generation: 
         self.keypress_idxs = {
-            "movement" : [(4,  80), (7,  79), (20, 82)],  # pygame.key.get_pressed() ScancodeWrapper()'s idxs for: [(a, l_arrow), (d, r_arrow), (w, up_arrow)]
+            "movement" : [(4,  80), (7,  79), (26, 82)],  # pygame.key.get_pressed() ScancodeWrapper()'s idxs for: [(a, l_arrow), (d, r_arrow), (w, up_arrow)]
             "weapon"   : [(13, 89), (14, 90), (15, 91)]   #                                                        [(j, KP1),     (k, KP2),     (l, KP3)     ]                                 
         }
         
@@ -104,6 +104,9 @@ class Fighter():
         
         # tracks dead or alive: 
         self.alive = True
+        
+        # for training only: number of frames eclipsed in game so far
+        self.num_frames = -1 
            
     def load_images(self, sprite_sheet, animation_steps):
         # extract images from spritesheet:
@@ -119,6 +122,9 @@ class Fighter():
             animation_list.append(temp_img_list)
             
         return animation_list
+    
+    def receive_frame_info(self, frame_count): 
+        self.num_frames = frame_count
     
     def get_state(self, target):
         # init. state container: 
@@ -144,6 +150,8 @@ class Fighter():
         self_condition_onehots = [1 if self.running   else 0] + [1 if self.jump   else 0] + [1 if self.attacking   else 0] + [1 if self.parrying   else 0]
         targ_condition_onehots = [1 if target.running else 0] + [1 if target.jump else 0] + [1 if target.attacking else 0] + [1 if target.parrying else 0]
         state += self_condition_onehots + targ_condition_onehots
+        # frame count of training game: 
+        state += [self.num_frames]
         
         # return state representation for self Fighter as numpy array. 
         return np.array(state, dtype="float32")

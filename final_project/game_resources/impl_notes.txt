@@ -6,9 +6,9 @@ gameplay elements:
 
 hyperparameters as not-function-parameter locations: 
     - round win/loss/tie reward in 'game.py''s step() function
-    - concurrent location reward penalty in same location as ^above^ (to encourage combat)
-    - fighter ideal distance reward shaping to encourage combat (same location as ^above^)
     * REMOVED AS OF 02/23/25:
+        - concurrent location reward penalty in same location as ^above^ (to encourage combat)
+        - fighter ideal distance reward shaping to encourage combat (same location as ^above^)
         - constant penalty reward shaping (self.health - target.health - 100) to encourage combat (same location as ^above^)
         
 other important hyperparameters: 
@@ -31,11 +31,14 @@ to-do's:
         4.1. ✅ write train_step function in trainer.py
 
     long-term: 
-    0. prelim. train model! 
-        0.1. do prelim. train with few training episodes, just to make sure everything is working. 
-        0.2. if prelim. train works, update train() to write loss & avg. reward to files for viz. 
-    1. train model verbose! 
-        * make sure loss + reward writing funcs. work before letting trainer run on big train.
+    0. ✅ prelim. train model! 
+        0.1. ✅ do prelim. train with few training episodes, just to make sure everything is working. 
+        0.2. ✅ if prelim. train works, update train() to write loss & avg. reward to files for viz. 
+
+    1. 🚧 train model verbose! 
+        1.1. ✅ make sure loss + reward writing funcs. work before letting trainer run on big train.
+
     2. after model has been trained: 
-        1.1. re-visit demo & make sure loading loaded-params AI_TRAINER agent works!
-        1.2. run AI_TRAINER vs AI_RAND test!
+        2.1. re-visit demo & make sure loading loaded-params AI_TRAINER agent works!
+        2.2. run AI_TRAINER vs AI_RAND test!
+        2.3. run AI_TRAINER vs HUMAN   test!

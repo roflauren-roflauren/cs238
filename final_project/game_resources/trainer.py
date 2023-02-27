@@ -58,8 +58,11 @@ class Trainer():
     
     ## NOTE: epsilon_greedy() CURRENTLY IN USE.
     def epsilon_greedy(self, q_vals, epsilon): 
+        # initialize the ret. value (an action index):
         action_idx = 0
+        # sample a probability: 
         prob = np.random.uniform()
+        # use the epsilon-greedy action selection approach:
         if prob < epsilon: 
             action_idx = np.random.choice(len(q_vals))
         else:
@@ -117,13 +120,18 @@ class Trainer():
         # track total training time and total episode count: 
         train_time_start, episode_count = time.time(), 0
         
+        # add the prior episode count if we're continuing training from a prior session: 
+        episode_count = episode_count + save_file_start_ep_count \
+            if save_file_start_ep_count is not None else episode_count
+        
         # extract the epsilon parameter into a local var. for updates: 
         e = epsilon
         
         # for each training game: 
         for game_idx in range(num_train_games): 
             # report which training game this is: 
-            print("Training with game number {game_num}".format(game_num = game_idx))
+            print("Training with game number {game_num}".format(
+                game_num = game_idx + save_file_start_game_num if save_file_start_game_num is not None else game_idx))
             
             # (re-)instantiate the game environment:
             training_game = Game("AI_TRAINER", "AI_TRAINER", game_max_frames = game_max_frames) 
@@ -142,6 +150,10 @@ class Trainer():
             # while this training game is ongoing: 
             while not game_over: 
                 ## STATES: 
+                ## tell fighters what frame they're in (from game class variable): 
+                training_game.fighter_1.receive_frame_info(training_game.frame)
+                training_game.fighter_2.receive_frame_info(training_game.frame)
+                
                 # retrieve the state for each fighter (as numpy ndarray): 
                 f1_state_np, f2_state_np = training_game.fighter_1.get_state(training_game.fighter_2), \
                     training_game.fighter_2.get_state(training_game.fighter_1)
@@ -219,15 +231,13 @@ class Trainer():
                     # add the prior game count if we're continuing training from a prior session: 
                     game_count = game_idx + save_file_start_game_num \
                         if save_file_start_game_num is not None else game_idx
-                    # add the prior episode count if we're continuing training from a prior session: 
-                    episode_count = episode_count + save_file_start_ep_count \
-                        if save_file_start_ep_count is not None else episode_count
                     # info message:
                     print("SAVING MODEL PARAMETERS...")
-                    torch.save(self.train_nn.state_dict(),  
-                               model_params_save_dir + "train_nn"  + "_" + str(game_count) + "_" + str(episode_count) + ".params")
-                    torch.save(self.target_nn.state_dict(), 
-                               model_params_save_dir + "target_nn" + "_" + str(game_count) + "_" + str(episode_count) + ".params")
+                    torch.save(
+                        self.target_nn.state_dict(), 
+                        model_params_save_dir + "target_nn" + "_" \
+                            + str(game_count) + "_" + str(episode_count) + ".params"
+                        )
                     
                 ## NEURAL NETWORK TRAINING:
                 # if there are sufficient episodes in the replay buffer:

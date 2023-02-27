@@ -1,10 +1,11 @@
+import numpy  as np
 import pygame
-from fighter import Fighter
 
+from fighter import Fighter
 
 class Game(): 
     """ This class represents the brawler game environment. """
-    def __init__(self, fighter_1_type: str, fighter_2_type : str, game_max_frames : int):
+    def __init__(self, fighter_1_type: str, fighter_2_type : str, game_max_frames : int = None):
         """ Constructor for game environment. """
         super().__init__()
         # verify goodness of fighter types: 
@@ -19,8 +20,8 @@ class Game():
         self.clock, self.FPS = pygame.time.Clock(), 120 
         # colors: 
         self.COLORS = {
-            "RED" : (255, 0, 0),       "YELLOW" : (255, 255, 0),
-            "WHITE" : (255, 255, 255), "GREEN" : (0, 255, 0)
+            "RED"   : (255, 0,   0  ), "YELLOW" : (255, 255, 0),
+            "WHITE" : (255, 255, 255), "GREEN"  : (0,   255, 0)
         }
         # game widow object:
         self.screen = pygame.display.set_mode(size=(self.SCREEN_WIDTH, self.SCREEN_HEIGHT))
@@ -41,8 +42,11 @@ class Game():
         # internal game frame counter: 
         self.frame = 0
         # max frame constant: 
-        self.max_frames = game_max_frames
-    
+        if game_max_frames is not None:
+            self.max_frames = game_max_frames
+        else: 
+            self.max_frames = np.Inf
+            
     def reset_fighters(self): 
         """ Reset the fighters for another round. """
         # reset the fighters (by re-instantiating them):
@@ -118,30 +122,24 @@ class Game():
         # round is ongoing and no one has died: 
         else: 
             f1_terminal, f2_terminal = 0, 0 
+            # reward is a function of health differential: 
             f1_reward = self.fighter_1.health - self.fighter_2.health
             f2_reward = self.fighter_2.health - self.fighter_1.health
             # if the maximum number of frames for a game is exceeded, it's a tie: 
             if self.frame >= self.max_frames:
                 # info message:
                 print("NO WINNER. PENALIZING BOTH FIGHTERS...")
-                # penalize both fighters for tying to encourage combat
+                # penalize both fighters for tying to encourage combat:
                 f1_terminal, f2_terminal = 1, 1
                 f1_reward -= 5000
                 f2_reward -= 5000 
-            # if the game is going to continue:
-            else: 
-                # reward fighter convergence which makes combat more likely: 
-                dist_reward = max(
-                    100 - abs(self.fighter_1.rect.centerx - self.fighter_2.rect.centerx), 
-                    0, 
-                )
-                f1_reward += dist_reward
-                f2_reward += dist_reward
-                
-                # penalize concurrent positions of the fighters which makes combat unlikely: 
-                if self.fighter_1.rect.centerx == self.fighter_2.rect.centerx: 
-                    f1_reward -= 100
-                    f2_reward -= 100
+            # if the round is ongoing: 
+            else:
+                # accrue length-of-round penalty (increases with frame count):
+                # NOTE: in theory, this should incentivize combat as a health differential can outweigh this penalty. 
+                f1_reward -= (self.frame // (self.max_frames / 100))
+                f2_reward -= (self.frame // (self.max_frames / 100))
+
                 
         # retrieve the (current) next state for each fighter: 
         f1_next_state = self.fighter_1.get_state(self.fighter_2)

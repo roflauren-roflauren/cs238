@@ -1,5 +1,4 @@
 import numpy  as np
-import pandas as pd 
 import random as rd 
 
 import torch 
@@ -8,12 +7,14 @@ import torch.nn.functional as F
 
 ## constants: 
 # dimensionality of input, output: 
-NUM_INPUTS, NUM_ACTIONS = 42, 16
-
+NUM_INPUTS, NUM_ACTIONS = 43, 16
 
 class DeepQNN(nn.Module): 
     """ A 4-layer neural network for deep Q-learning. """
-    def __init__(self, num_hn_layer1, num_hn_layer2):
+    def __init__(self, 
+        num_hn_layer1 : int = 34, 
+        num_hn_layer2 : int = 26
+    ):
         super().__init__()
         # create layers:
         self.ll1 = nn.Linear(NUM_INPUTS   , num_hn_layer1)
