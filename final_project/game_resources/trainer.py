@@ -250,7 +250,7 @@ class Trainer():
                     loss_log.append(loss.cpu().data.numpy())
               
             # decay epsilon for next game if above some threshold: 
-            if e > 0.005: e -= 0.001
+            if e > 0.05: e -= 0.001
                 
         # quit pygame once all training games are done: 
         pg.quit()
