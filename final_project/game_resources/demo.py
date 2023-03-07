@@ -12,7 +12,7 @@ from dqn  import DeepQNN
 argp = argparse.ArgumentParser()
 argp.add_argument(
     '--mode', 
-    help = "Choose \"HvH\", \"HvRand\", or \"HvAI\"",
+    help = "Choose \"HvH\", \"HvRand\", \"HvAI\", or \"RandvAI\"",
     default = None, 
     type = str
 )
@@ -38,7 +38,11 @@ def main():
     elif args.mode == "HvAI":
         fighter_1_type, fighter_2_type = "HUMAN", "AI_TRAINER"
         # if 'fighter_2_type' == "AI_TRAINER", make sure a path to model parameters was provided: 
-        if argp.params is None: 
+        if args.params is None: 
+            raise FileNotFoundError("Please specify a path for the AI action generation model parameters using the \"--params\" argument.")
+    elif args.mode == "RandvAI":
+        fighter_1_type, fighter_2_type = "AI_RANDOM", "AI_TRAINER"
+        if args.params is None: 
             raise FileNotFoundError("Please specify a path for the AI action generation model parameters using the \"--params\" argument.")
     else: 
         raise ValueError("Invalid or no demo mode provided.") 
@@ -47,10 +51,10 @@ def main():
     device = torch.cuda.current_device() if torch.cuda.is_available() else 'cpu'
     # instantiate a model to evaluate states and generate actions for the AI_TRAINER agent: 
     # NOTE: this model will only be used if '--mode' == "HvAI".
-    model = DeepQNN().to(device)
+    model = DeepQNN(num_hn_layer1=34, num_hn_layer2=25).to(device)
     # load model parameters: 
     if fighter_2_type == "AI_TRAINER":
-        model.load_State_dict(torch.load(argp.params))
+        model.load_state_dict(torch.load(args.params))
     
     # create game object: 
     game = Game(fighter_1_type, fighter_2_type)
@@ -88,7 +92,9 @@ def main():
             if not round_over:                 
                 # if applicable, generate fighter greedy action from model:
                 if fighter_2_type == "AI_TRAINER": 
-                    qs = model(game.fighter_2.get_state()).cpu().data.numpy()
+                    game.fighter_2.receive_frame_info(game.frame)
+                    s = game.fighter_2.get_state(game.fighter_1)
+                    qs = model(torch.from_numpy(s).to(device)).cpu().data.numpy()
                     f2_action_idx = np.argmax(qs)
                 else: 
                     f2_action_idx = None 
@@ -109,7 +115,8 @@ def main():
                 if pygame.time.get_ticks() - round_over_time > ROUND_OVER_COOLDOWN: 
                     # score-keeping: 
                     winner = 1 if game.fighter_1.alive == False else 0
-                    game.score[winner] += 1    
+                    game.score[winner] += 1 
+          
                     # reset necessary game elements:
                     round_over = False
                     intro_count = 3  # reset the round start countdown
